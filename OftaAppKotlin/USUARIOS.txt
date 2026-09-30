@@ -1,0 +1,43 @@
+========================================================
+  OFTA APP - USUARIOS DE PRUEBA (INICIO DE SESION)
+========================================================
+
+Abre la app y escribe en el login uno de las cuentas
+de abajo. En todos los casos la clave es: 1234
+
+--------------------------------------------------------
+ USUARIO           | CLAVE | NOMBRE              | ROL
+--------------------------------------------------------
+ dra.fernandez     | 1234  | Dra. Fernández      | Oftalmóloga
+ dr.silva          | 1234  | Dr. Roberto Silva    | Oftalmólogo
+ sxtnix            | 1234  | Estudiante DuocUC   | Estudiante
+--------------------------------------------------------
+
+CORREOS
+  dra.fernandez -> m.fernandez@oftapp.cl
+  dr.silva      -> r.silva@oftapp.cl
+  sxtnix        -> di.diazh@duocuc.cl
+
+--------------------------------------------------------
+COMO ENTRAR
+--------------------------------------------------------
+1. Abre Ofta App en el celular.
+2. Usuario:      dra.fernandez
+3. Contraseña:   1234
+4. Toca "Iniciar sesión".
+
+- Si la clave está mal aparece el mensaje en rojo:
+  "Usuario o contraseña incorrectos."
+- El usuario se valida sin importar mayúsculas
+  (DRA.FERNANDEZ también funciona), la clave no.
+
+--------------------------------------------------------
+NOTAS
+--------------------------------------------------------
+- Cuentas de prueba para el MVP: no hay servidor, los
+  datos viven en la memoria de la app
+  (app/src/main/java/com/equipo7/oftaapp/repository/
+   UsuarioRepository.kt).
+- Si cierras la app del todo, vuelve a pedir el login.
+- Los exámenes, pacientes e historial también son de
+  demostración: se restauran al reiniciar la app.

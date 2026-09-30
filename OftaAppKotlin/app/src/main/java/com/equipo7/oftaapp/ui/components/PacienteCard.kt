@@ -21,14 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.equipo7.oftaapp.model.ExamenOftalmologico
+import com.equipo7.oftaapp.model.Paciente
 import com.equipo7.oftaapp.ui.theme.TarjetaBlanca
 import com.equipo7.oftaapp.ui.theme.TextoSecundario
 import com.equipo7.oftaapp.ui.theme.VerdeOfta
 
 @Composable
-fun ExamenCard(
-    examen: ExamenOftalmologico,
+fun PacienteCard(
+    paciente: Paciente,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
@@ -54,33 +54,30 @@ fun ExamenCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = examen.tipoExamen,
+                    text = paciente.nombreCompleto,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${examen.pacienteNombre} · ${examen.fecha}",
+                    text = "RUT ${paciente.rut} · ${paciente.edad} años",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextoSecundario
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    EtiquetaEstado(estado = examen.estado)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = examen.medicoSolicitante,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TextoSecundario
-                    )
-                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = paciente.prevision,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = VerdeOfta
+                )
             }
 
             Icon(
                 imageVector = Icons.Filled.KeyboardArrowRight,
-                contentDescription = "Ver detalle",
-                tint = VerdeOfta,
+                contentDescription = null,
+                tint = TextoSecundario,
                 modifier = Modifier.padding(start = 8.dp)
             )
         }

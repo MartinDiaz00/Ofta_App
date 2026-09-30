@@ -7,5 +7,8 @@ data class ExamenOftalmologico(
     val fecha: String,
     val medicoSolicitante: String,
     val estado: String,
-    val observaciones: String
+    val observaciones: String,
+    val ojoEvaluado: String = "Derecho",
+    val sucursal: String = "Puerto Montt",
+    val documento: String = "resultado.pdf"
 )
