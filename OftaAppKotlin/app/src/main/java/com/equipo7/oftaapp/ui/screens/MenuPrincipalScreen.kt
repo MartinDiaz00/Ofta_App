@@ -557,7 +557,7 @@ private fun ContenidoPerfil(
 
         OpcionCard(
             titulo = usuario.nombreCompleto,
-            subtitulo = usuario.rol,
+            subtitulo = usuario.rol.nombreMostrar,
             colorChevron = TextoSecundario
         )
 
@@ -574,7 +574,7 @@ private fun ContenidoPerfil(
                 HorizontalDivider(color = DivisorSuave, modifier = Modifier.padding(vertical = 8.dp))
                 DatoPerfil(etiqueta = "Correo", valor = usuario.correo)
                 HorizontalDivider(color = DivisorSuave, modifier = Modifier.padding(vertical = 8.dp))
-                DatoPerfil(etiqueta = "Rol", valor = usuario.rol)
+                DatoPerfil(etiqueta = "Rol", valor = usuario.rol.nombreMostrar)
                 HorizontalDivider(color = DivisorSuave, modifier = Modifier.padding(vertical = 8.dp))
                 DatoPerfil(etiqueta = "Equipo", valor = "Equipo 07 - DuocUC")
                 HorizontalDivider(color = DivisorSuave, modifier = Modifier.padding(vertical = 8.dp))

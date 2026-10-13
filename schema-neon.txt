@@ -1,0 +1,284 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE IF NOT EXISTS roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(120) UNIQUE,
+    password_hash TEXT NOT NULL,
+    nombre_completo VARCHAR(120) NOT NULL,
+    rol_principal_id UUID REFERENCES roles(id),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TRIGGER trg_usuarios_updated_at
+BEFORE UPDATE ON usuarios
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE IF NOT EXISTS usuario_roles (
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    rol_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    asignado_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (usuario_id, rol_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuario_roles_usuario
+    ON usuario_roles (usuario_id);
+
+CREATE INDEX IF NOT EXISTS idx_usuario_roles_rol
+    ON usuario_roles (rol_id);
+
+CREATE TABLE IF NOT EXISTS pacientes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    rut VARCHAR(20) UNIQUE,
+    nombre_completo VARCHAR(150) NOT NULL,
+    fecha_nacimiento DATE,
+    edad INTEGER CHECK (edad IS NULL OR edad BETWEEN 0 AND 130),
+    prevision VARCHAR(30),
+    telefono VARCHAR(30),
+    email VARCHAR(120),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TRIGGER trg_pacientes_updated_at
+BEFORE UPDATE ON pacientes
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_pacientes_nombre
+    ON pacientes (nombre_completo);
+
+CREATE INDEX IF NOT EXISTS idx_pacientes_rut
+    ON pacientes (rut);
+
+CREATE TABLE IF NOT EXISTS examenes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id UUID NOT NULL REFERENCES pacientes(id) ON DELETE RESTRICT,
+    tipo_examen VARCHAR(80) NOT NULL,
+    fecha_examen DATE NOT NULL,
+    medico_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    ojo_evaluado VARCHAR(20) NOT NULL
+        CHECK (ojo_evaluado IN ('Derecho', 'Izquierdo', 'Ambos')),
+    sucursal VARCHAR(80),
+    estado VARCHAR(30) NOT NULL
+        CHECK (estado IN ('Pendiente', 'Completado', 'Cancelado')),
+    observaciones TEXT,
+    documento_url TEXT,
+    created_by UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TRIGGER trg_examenes_updated_at
+BEFORE UPDATE ON examenes
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_examenes_paciente
+    ON examenes (paciente_id);
+
+CREATE INDEX IF NOT EXISTS idx_examenes_medico
+    ON examenes (medico_id);
+
+CREATE INDEX IF NOT EXISTS idx_examenes_fecha
+    ON examenes (fecha_examen);
+
+CREATE INDEX IF NOT EXISTS idx_examenes_estado
+    ON examenes (estado);
+
+CREATE INDEX IF NOT EXISTS idx_examenes_paciente_fecha
+    ON examenes (paciente_id, fecha_examen DESC);
+
+CREATE TABLE IF NOT EXISTS documentos_examen (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    examen_id UUID NOT NULL REFERENCES examenes(id) ON DELETE CASCADE,
+    nombre VARCHAR(255) NOT NULL,
+    url TEXT NOT NULL,
+    mime_type VARCHAR(100) DEFAULT 'application/pdf',
+    tamano_bytes BIGINT,
+    hash_sha256 VARCHAR(64),
+    subido_por UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_documentos_examen
+    ON documentos_examen (examen_id);
+
+CREATE TABLE IF NOT EXISTS citas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id UUID NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
+    medico_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    fecha_hora_inicio TIMESTAMPTZ NOT NULL,
+    fecha_hora_fin TIMESTAMPTZ,
+    estado VARCHAR(30) NOT NULL
+        CHECK (estado IN ('Programada', 'Confirmada', 'Cancelada', 'Completada', 'No Asistió')),
+    motivo VARCHAR(160),
+    examen_id UUID REFERENCES examenes(id) ON DELETE SET NULL,
+    recordatorio_enviado BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (fecha_hora_fin IS NULL OR fecha_hora_fin > fecha_hora_inicio)
+);
+
+CREATE TRIGGER trg_citas_updated_at
+BEFORE UPDATE ON citas
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_citas_paciente
+    ON citas (paciente_id);
+
+CREATE INDEX IF NOT EXISTS idx_citas_medico
+    ON citas (medico_id);
+
+CREATE INDEX IF NOT EXISTS idx_citas_fecha
+    ON citas (fecha_hora_inicio);
+
+CREATE INDEX IF NOT EXISTS idx_citas_estado
+    ON citas (estado);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_citas_medico_inicio
+    ON citas (medico_id, fecha_hora_inicio)
+    WHERE estado IN ('Programada', 'Confirmada');
+
+CREATE TABLE IF NOT EXISTS notificaciones (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    cita_id UUID REFERENCES citas(id) ON DELETE SET NULL,
+    examen_id UUID REFERENCES examenes(id) ON DELETE SET NULL,
+    tipo VARCHAR(40) NOT NULL
+        CHECK (tipo IN ('cita', 'recordatorio', 'resultado', 'cambio_estado', 'general')),
+    titulo VARCHAR(150) NOT NULL,
+    mensaje TEXT NOT NULL,
+    leida BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario
+    ON notificaciones (usuario_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_notificaciones_no_leidas
+    ON notificaciones (usuario_id)
+    WHERE leida = FALSE;
+
+CREATE TABLE IF NOT EXISTS auditoria (
+    id BIGSERIAL PRIMARY KEY,
+    tabla VARCHAR(60) NOT NULL,
+    registro_id UUID,
+    accion VARCHAR(20) NOT NULL
+        CHECK (accion IN ('INSERT', 'UPDATE', 'DELETE')),
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    datos_anteriores JSONB,
+    datos_nuevos JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_tabla
+    ON auditoria (tabla, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario
+    ON auditoria (usuario_id, created_at DESC);
+
+CREATE OR REPLACE VIEW vw_historial_paciente_medico AS
+SELECT
+    p.id AS paciente_id,
+    p.nombre_completo AS paciente,
+    m.id AS medico_id,
+    m.nombre_completo AS medico,
+    COUNT(*) AS consultas,
+    MIN(e.fecha_examen) AS primera_consulta,
+    MAX(e.fecha_examen) AS ultima_consulta
+FROM examenes e
+JOIN pacientes p ON p.id = e.paciente_id
+JOIN usuarios m ON m.id = e.medico_id
+GROUP BY p.id, p.nombre_completo, m.id, m.nombre_completo;
+
+CREATE OR REPLACE VIEW vw_paciente_medico_especial AS
+SELECT *
+FROM vw_historial_paciente_medico
+WHERE consultas >= 2;
+
+INSERT INTO roles (nombre, descripcion) VALUES
+    ('PACIENTE', 'Usuario comun que consulta sus citas, examenes y resultados'),
+    ('TENS', 'Tecnico de enfermeria que puede registrar, editar y gestionar examenes'),
+    ('OFTALMOLOGO', 'Medico especialista con permisos clinicos completos'),
+    ('ADMINISTRADOR', 'Administrador que gestiona usuarios, roles y parametros')
+ON CONFLICT (nombre) DO NOTHING;
+
+INSERT INTO usuarios (username, email, nombre_completo, password_hash, rol_principal_id)
+SELECT
+    'dra.fernandez',
+    'm.fernandez@oftapp.cl',
+    'Dra. Fernandez',
+    crypt('1234', gen_salt('bf')),
+    r.id
+FROM roles r
+WHERE r.nombre = 'OFTALMOLOGO'
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO usuarios (username, email, nombre_completo, password_hash, rol_principal_id)
+SELECT
+    'dr.silva',
+    'r.silva@oftapp.cl',
+    'Dr. Roberto Silva',
+    crypt('1234', gen_salt('bf')),
+    r.id
+FROM roles r
+WHERE r.nombre = 'OFTALMOLOGO'
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO usuarios (username, email, nombre_completo, password_hash, rol_principal_id)
+SELECT
+    'tens.martinez',
+    'tens.martinez@oftapp.cl',
+    'TENS Martinez',
+    crypt('1234', gen_salt('bf')),
+    r.id
+FROM roles r
+WHERE r.nombre = 'TENS'
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO usuarios (username, email, nombre_completo, password_hash, rol_principal_id)
+SELECT
+    'sxtnix',
+    'di.diazh@duocuc.cl',
+    'Estudiante DuocUC',
+    crypt('1234', gen_salt('bf')),
+    r.id
+FROM roles r
+WHERE r.nombre = 'PACIENTE'
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO usuario_roles (usuario_id, rol_id)
+SELECT u.id, r.id
+FROM usuarios u
+JOIN roles r ON r.id = u.rol_principal_id
+ON CONFLICT DO NOTHING;
+
+INSERT INTO pacientes (rut, nombre_completo, edad, prevision)
+VALUES
+    ('18.234.567-8', 'Juan Perez', 45, 'Fonasa'),
+    ('19.876.543-2', 'Maria Gonzalez', 32, 'Isapre'),
+    ('17.111.222-3', 'Carlos Tapia', 58, 'Fonasa')
+ON CONFLICT (rut) DO NOTHING;
