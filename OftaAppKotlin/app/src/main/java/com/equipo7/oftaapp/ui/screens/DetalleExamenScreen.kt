@@ -106,10 +106,11 @@ fun ContenidoDetalle(
                     "Prueba Ofta App",
                     "Notificacion generada correctamente."
                 )
+                NotificationHelper.enviarCorreoDePrueba(contexto)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Probar notificacion")
+            Text(text = "Probar notificacion y enviar correo")
         }
     }
 }

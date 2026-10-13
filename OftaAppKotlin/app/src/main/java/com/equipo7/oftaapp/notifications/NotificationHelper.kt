@@ -3,6 +3,8 @@ package com.equipo7.oftaapp.notifications
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.equipo7.oftaapp.R
@@ -35,5 +37,16 @@ object NotificationHelper {
             .build()
         val manager = contexto.getSystemService(NotificationManager::class.java)
         manager?.notify(System.currentTimeMillis().toInt(), notificacion)
+    }
+
+    fun enviarCorreoDePrueba(contexto: Context) {
+        val correo = "maa.diazg@duocuc.cl"
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:$correo")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(correo))
+            putExtra(Intent.EXTRA_SUBJECT, "Prueba de notificacion - Ofta App")
+            putExtra(Intent.EXTRA_TEXT, "Hola Martin. Esta es una prueba de notificacion desde Ofta App.")
+        }
+        contexto.startActivity(Intent.createChooser(intent, "Enviar correo de prueba"))
     }
 }
