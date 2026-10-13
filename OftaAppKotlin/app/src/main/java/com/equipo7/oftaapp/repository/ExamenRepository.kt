@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter
 
 class ExamenRepository {
     private val dbUrl =
-        "jdbc:postgresql://ep-wild-rain-b6ycnirq-pooler.c-2.sa-east-1.aws.neon.tech/neondb?sslmode=require&channelBinding=require"
+        "jdbc:postgresql://ep-wild-rain-b6ycnirq-pooler.c-2.sa-east-1.aws.neon.tech/neondb?sslmode=require&channelBinding=require&maxResultBuffer=65536"
     private val dbUser = "neondb_owner"
     private val dbPassword = "npg_dQbnc3uqVGw6"
 
