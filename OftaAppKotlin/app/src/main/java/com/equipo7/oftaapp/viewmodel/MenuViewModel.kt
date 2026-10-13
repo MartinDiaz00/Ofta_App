@@ -1,12 +1,14 @@
 package com.equipo7.oftaapp.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.equipo7.oftaapp.model.Paciente
 import com.equipo7.oftaapp.model.SeccionApp
 import com.equipo7.oftaapp.repository.ExamenRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class MenuUiState(
     val seccionActiva: SeccionApp = SeccionApp.INICIO,
@@ -26,7 +28,7 @@ class MenuViewModel : ViewModel() {
         refrescarResumen()
     }
 
-    fun refrescarResumen() {
+    fun refrescarResumen() = viewModelScope.launch {
         val examenes = repository.obtenerExamenes()
 
         _uiState.value = _uiState.value.copy(

@@ -68,12 +68,14 @@ fun OpcionCard(
                 )
             }
 
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = colorChevron,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+            if (onClick != null) {
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = colorChevron,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
         }
     }
 }
