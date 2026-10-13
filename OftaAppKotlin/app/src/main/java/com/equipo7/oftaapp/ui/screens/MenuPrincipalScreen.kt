@@ -63,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.equipo7.oftaapp.R
 import com.equipo7.oftaapp.model.ExamenOftalmologico
 import com.equipo7.oftaapp.model.Paciente
+import com.equipo7.oftaapp.model.Rol
 import com.equipo7.oftaapp.model.SeccionApp
 import com.equipo7.oftaapp.model.Usuario
 import com.equipo7.oftaapp.ui.components.ExamenCard
@@ -112,6 +113,7 @@ fun MenuPrincipalScreen(
     }
 
     fun navegarA(seccion: SeccionApp) {
+        if (!seccion.visiblePara(usuario.rol)) return
         examenDetalle = null
         estadoListado = null
         menuViewModel.seleccionar(seccion)
@@ -210,7 +212,7 @@ fun MenuPrincipalScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                SeccionApp.entries.forEach { seccion ->
+                SeccionApp.entries.filter { it.visiblePara(usuario.rol) }.forEach { seccion ->
                     NavigationDrawerItem(
                         label = { Text(seccion.titulo) },
                         selected = menuState.seccionActiva == seccion && examenDetalle == null,
@@ -231,7 +233,7 @@ fun MenuPrincipalScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${usuario.rol} · ${usuario.usuario}",
+                        text = "${usuario.rol.nombreMostrar} · ${usuario.usuario}",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextoSecundario
                     )
@@ -317,6 +319,7 @@ fun MenuPrincipalScreen(
 
             when (menuState.seccionActiva) {
                 SeccionApp.INICIO -> ContenidoInicio(
+                    rol = usuario.rol,
                     state = menuState,
                     onNavegar = { navegarA(it) },
                     onEstado = { estadoListado = it },
@@ -344,17 +347,32 @@ fun MenuPrincipalScreen(
                     modifier = Modifier.padding(paddingValues)
                 )
 
-                SeccionApp.REGISTRAR -> ContenidoRegistrar(
-                    pacientes = menuState.pacientes,
-                    onGuardar = examenesViewModel::registrarExamen,
-                    onGuardado = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Examen registrado correctamente")
+                SeccionApp.REGISTRAR ->
+                    if (usuario.rol.puedeRegistrarExamen()) {
+                        ContenidoRegistrar(
+                            pacientes = menuState.pacientes,
+                            onGuardar = examenesViewModel::registrarExamen,
+                            onGuardado = {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Examen registrado correctamente")
+                                }
+                                navegarA(SeccionApp.EXAMENES)
+                            },
+                            modifier = Modifier.padding(paddingValues)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Tu rol no tiene permisos para registrar exámenes.",
+                                color = TextoSecundario
+                            )
                         }
-                        navegarA(SeccionApp.EXAMENES)
-                    },
-                    modifier = Modifier.padding(paddingValues)
-                )
+                    }
 
                 SeccionApp.PERFIL -> ContenidoPerfil(
                     usuario = usuario,
@@ -368,6 +386,7 @@ fun MenuPrincipalScreen(
 
 @Composable
 private fun ContenidoInicio(
+    rol: Rol,
     state: MenuUiState,
     onNavegar: (SeccionApp) -> Unit,
     onEstado: (String) -> Unit,
@@ -402,6 +421,16 @@ private fun ContenidoInicio(
             subtitulo = "Antecedentes del paciente",
             onClick = { onNavegar(SeccionApp.HISTORIAL) }
         )
+
+        if (rol.puedeRegistrarExamen()) {
+            Spacer(modifier = Modifier.height(14.dp))
+
+            OpcionCard(
+                titulo = "Registrar Examen",
+                subtitulo = "Nuevo examen oftalmológico",
+                onClick = { onNavegar(SeccionApp.REGISTRAR) }
+            )
+        }
 
         Spacer(modifier = Modifier.height(26.dp))
 

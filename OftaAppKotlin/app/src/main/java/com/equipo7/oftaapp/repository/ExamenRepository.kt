@@ -26,7 +26,12 @@ class ExamenRepository {
     fun examenesDePaciente(nombrePaciente: String): List<ExamenOftalmologico> =
         examenesSimulados.filter { it.pacienteNombre == nombrePaciente }
 
-    fun siguienteId(): String = "EX-%03d".format(examenesSimulados.size + 1)
+    fun siguienteId(): String {
+        val maxId = examenesSimulados
+            .mapNotNull { it.id.removePrefix("EX-").toIntOrNull() }
+            .maxOrNull() ?: 0
+        return "EX-%03d".format(maxId + 1)
+    }
 
     companion object {
         private val examenesSimulados = mutableListOf(

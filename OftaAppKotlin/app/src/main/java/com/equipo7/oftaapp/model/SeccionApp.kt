@@ -6,5 +6,10 @@ enum class SeccionApp(val titulo: String) {
     PACIENTES("Pacientes"),
     HISTORIAL("Historial"),
     REGISTRAR("Registrar Examen"),
-    PERFIL("Perfil")
+    PERFIL("Perfil");
+
+    fun visiblePara(rol: Rol): Boolean = when (this) {
+        REGISTRAR -> rol.puedeRegistrarExamen()
+        else -> true
+    }
 }

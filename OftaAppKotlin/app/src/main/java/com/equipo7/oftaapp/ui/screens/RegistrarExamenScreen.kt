@@ -86,7 +86,6 @@ fun ContenidoRegistrar(
             if (tipoExamen.isBlank()) add("Tipo de examen")
             if (ojoEvaluado.isBlank()) add("Ojo evaluado")
             if (estado.isBlank()) add("Estado")
-            if (observaciones.isBlank()) add("Observaciones")
         }
 
         when {

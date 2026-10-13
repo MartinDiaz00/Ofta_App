@@ -1,5 +1,6 @@
 package com.equipo7.oftaapp.repository
 
+import com.equipo7.oftaapp.model.Rol
 import com.equipo7.oftaapp.model.Usuario
 
 class UsuarioRepository {
@@ -20,21 +21,28 @@ class UsuarioRepository {
                 contrasena = "1234",
                 nombreCompleto = "Dra. Fernández",
                 correo = "m.fernandez@oftapp.cl",
-                rol = "Oftalmóloga"
+                rol = Rol.OFTALMOLOGO
             ),
             Usuario(
                 usuario = "dr.silva",
                 contrasena = "1234",
                 nombreCompleto = "Dr. Roberto Silva",
                 correo = "r.silva@oftapp.cl",
-                rol = "Oftalmólogo"
+                rol = Rol.OFTALMOLOGO
+            ),
+            Usuario(
+                usuario = "tens.martinez",
+                contrasena = "1234",
+                nombreCompleto = "TENS Martinez",
+                correo = "tens.martinez@oftapp.cl",
+                rol = Rol.TENS
             ),
             Usuario(
                 usuario = "sxtnix",
                 contrasena = "1234",
                 nombreCompleto = "Estudiante DuocUC",
                 correo = "di.diazh@duocuc.cl",
-                rol = "Estudiante"
+                rol = Rol.PACIENTE
             )
         )
     }
