@@ -49,7 +49,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.equipo7.oftaapp.R
-import com.equipo7.oftaapp.repository.UsuarioRepository
 import com.equipo7.oftaapp.ui.components.IconosDeBarra
 import com.equipo7.oftaapp.ui.theme.CampoLoginOscuro
 import com.equipo7.oftaapp.ui.theme.ErrorFormulario
@@ -239,16 +238,7 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = UsuarioRepository.ayudaPrueba,
-                style = MaterialTheme.typography.labelSmall,
-                color = TextoSecundario,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
         Spacer(modifier = Modifier.weight(1f))

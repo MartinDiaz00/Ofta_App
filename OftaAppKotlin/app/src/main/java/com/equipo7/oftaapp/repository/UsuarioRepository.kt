@@ -37,7 +37,5 @@ class UsuarioRepository {
                 rol = "Estudiante"
             )
         )
-
-        val ayudaPrueba = "Usuarios de prueba: dra.fernandez / 1234"
     }
 }
