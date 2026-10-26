@@ -1,0 +1,426 @@
+=====================================================================================
+OFTA_APP - TRABAJO PENDIENTE PARA OPENCODE
+Proyecto Android (Kotlin + Jetpack Compose + Material 3 + MVVM) - DSY1105, Evaluación Parcial 2
+=====================================================================================
+
+LEE ESTO PRIMERO
+----------------
+Este archivo describe TODO lo que falta cambiar en el proyecto Ofta_App existente. No hay que
+crear un proyecto nuevo ni cambiar el paquete (com.equipo7.oftaapp). Se puede mantener, cambiar
+o eliminar código existente si mejora el resultado, siempre respetando lo indicado aquí.
+
+La app se presentará a una empresa real y se evalúa con una rúbrica. Lo que NO es negociable
+(requisitos oficiales de la evaluación, contenidos de las clases 1 a 11):
+
+  1. Arquitectura MVVM real: Model, View (Compose), ViewModel, Repository.
+  2. Interfaz Material 3 coherente y navegación funcional entre pantallas del flujo principal.
+  3. ViewModel + StateFlow para el estado; las pantallas reaccionan a ese estado.
+  4. Al menos un formulario funcional con campos obligatorios, validación y mensajes visibles.
+  5. Listas con búsqueda, filtros y acceso a detalle sobre datos reales del proyecto.
+  6. Persistencia local con ROOM (SQLite): guardar y recuperar datos que se conservan al
+     cerrar y reabrir la app.
+  7. Al menos DOS recursos del dispositivo integrados al flujo real (cámara, galería,
+     documentos, fecha/hora, estado de Internet), con permisos cuando corresponda.
+  8. Repositorio actualizado con commits técnicos y README completo.
+
+Reglas del caso (respetarlas siempre):
+  - Todos los datos deben ser FICTICIOS (nombres, RUT, correos, teléfonos). Nada real.
+  - No usar credenciales, bases de datos productivas ni datos internos del cliente.
+  - La app es un MVP académico: no diagnostica ni reemplaza el criterio médico. Mostrar este
+    aviso en la app (Login o Perfil) y en el PDF.
+  - Accesibilidad visual es un pilar pedido por el cliente: texto legible, buen contraste,
+    elementos táctiles grandes, descripciones para lectores de pantalla.
+
+Restricciones técnicas:
+  - No agregar tecnologías fuera de alcance (nada de Hilt, Retrofit, Firebase, etc.).
+    Permitido: Room (+ KSP), Navigation Compose, Material 3, material-icons-extended,
+    Coroutines/Flow. Usar versiones compatibles con Kotlin 2.2.10 y AGP 9.4.1 (revisar
+    compatibilidad de KSP y Room antes de fijar versiones).
+  - minSdk 26. Mantener la identidad visual verde (#0F7A63 como color principal).
+  - Código y textos de la interfaz en español.
+
+Forma de trabajo con Git:
+  - Trabajar por bloques (los de abajo). Al terminar cada bloque: compilar
+    (./gradlew assembleDebug) y hacer UN commit con mensaje descriptivo en español, por
+    ejemplo "Agrega Room: entidades, DAO y base de datos". No reescribir historial, no usar
+    force push, no hacer push sin que el usuario lo pida.
+  - Ejecutar y probar cada bloque queda a cargo de OpenCode/usuario; aquí no se detallan
+    pruebas.
+
+ACCIONES MANUALES DEL USUARIO (NO son tarea del agente)
+  - Cambiar la contraseña de la base de Neon (estuvo escrita en el código y sigue en el
+    historial de Git). Una vez que el código ya no use Neon, desactivar o borrar esa base.
+  - Crear el tablero de Trello (tareas, responsables, avances) y que AMBOS integrantes hagan
+    commits antes de la entrega.
+
+
+=====================================================================================
+PARTE A. ESTADO ACTUAL (para que el agente entienda qué hay)
+=====================================================================================
+Rutas base: OftaAppKotlin/app/src/main/java/com/equipo7/oftaapp/
+
+Existe:
+  - MainActivity.kt: alterna LoginScreen / MenuPrincipalScreen según SesionViewModel.
+  - model/: Paciente, ExamenOftalmologico, Usuario (+ enum Rol), SeccionApp.
+  - repository/ExamenRepository.kt: usa JDBC directo a PostgreSQL (Neon) con runBlocking.
+  - repository/UsuarioRepository.kt: 4 usuarios fijos en memoria.
+  - viewmodel/: ExamenViewModel, MenuViewModel, SesionViewModel (con StateFlow).
+  - ui/screens/: Login, MenuPrincipal (menú lateral + toda la navegación por variables
+    remember), Examenes (lista + filtro de texto), Registrar, Detalle, Historial.
+  - ui/components/: ExamenCard, OpcionCard, PacienteCard, ResumenCard, BarraDeSistema.
+  - ui/theme/: Color, Theme, Type (verde, ya definido).
+  - util/PdfReport.kt (PDF de una página con FileProvider), notifications/NotificationHelper
+    y RemindNowWorker (el Worker no se usa).
+
+Problemas conocidos (a corregir con este plan):
+  - NO hay Room. La persistencia es remota (Neon) con credenciales escritas en el código.
+  - runBlocking dentro de viewModelScope.launch (bloquea el hilo principal); no hay try/catch.
+  - Formulario: fecha escrita a mano; la validación acepta "1/1/2026" pero el repositorio la
+    convierte con dd/MM/yyyy y falla; el mensaje de éxito se muestra antes de guardar; la opción
+    "Sin pacientes" se puede elegir y crearía un paciente con ese nombre; profesionales y
+    catálogos escritos en la pantalla y que no coinciden con la base; la tarjeta "resultado.pdf"
+    no hace nada y el campo documento siempre vale "resultado.pdf".
+  - Un solo recurso nativo realmente usable (PDF). Notificación sin pedir permiso
+    POST_NOTIFICATIONS; correo de prueba con dirección fija.
+  - El rol PACIENTE ve todos los pacientes y exámenes.
+  - Navegación sin NavHost: el detalle se pierde al girar la pantalla; Historial y Pacientes no
+    llevan al detalle; "Ver Exámenes" y "Buscar / Filtrar" llevan al mismo lugar; el buscador
+    solo filtra por texto aunque el inicio promete fecha/tipo/estado.
+  - Botón "¿Olvidaste tu contraseña?" sin acción; correos con apariencia real (@duocuc.cl).
+  - Pruebas son solo plantillas de ejemplo. README desactualizado (dice "datos en memoria" y
+    "no se requiere Room").
+
+
+=====================================================================================
+PARTE B. QUÉ MANTENER Y QUÉ ELIMINAR
+=====================================================================================
+MANTENER (se puede mejorar visualmente): paquete y nombre OftaApp, logo, paleta verde, login por
+roles, panel de resumen, lista de exámenes, detalle, historial por paciente, generación de PDF,
+FileProvider, estructura model/repository/viewmodel/ui.
+
+ELIMINAR:
+  - Todo JDBC/PostgreSQL: app/libs/postgresql-patched-42.7.4.jar, la implementation(files(...)),
+    cadenas de conexión, usuario/clave de Neon y schema-neon.txt (si existe).
+  - Permiso INTERNET del manifiesto (la app será local). Agregar ACCESS_NETWORK_STATE si se
+    implementa el indicador de conexión (Bloque 6).
+  - RemindNowWorker y la dependencia work-runtime-ktx si no se usan al final.
+  - Botón "Probar notificación y enviar correo" y enviarCorreoDePrueba (dirección fija).
+  - Tarjeta decorativa "resultado.pdf" y botón "¿Olvidaste tu contraseña?".
+  - Datos con apariencia real (@duocuc.cl, nombres de usuario personales como "sxtnix").
+  - Listas de profesionales, sucursales y exámenes escritas dentro de las pantallas.
+  - Duplicado "Buscar / Filtrar" frente a "Ver Exámenes" en el inicio.
+  - Archivos de ejemplo vacíos en test/androidTest se reemplazan en el Bloque 9.
+
+REORDENAR REPOSITORIO: el README y los documentos de clase hacen referencia a docs/diseno y
+docs/evidencias, pero las carpetas reales se llaman "Trabajo 1/...". Mover con git mv a:
+  docs/diseno/ (logo.png, flujo-usuario-uml.png, capturas de interfaces)
+  docs/evidencias/clase-01/ y docs/evidencias/clase-02/ (los .docx)
+Revisar .gitignore: debe ignorar /build, .gradle, .idea, local.properties, captures, *.rar.
+
+
+=====================================================================================
+PARTE C. BLOQUES DE TRABAJO (en este orden)
+=====================================================================================
+
+-------------------------------------------------------------------------------------
+BLOQUE 1. Room y capa de datos (REQUISITO OBLIGATORIO)
+-------------------------------------------------------------------------------------
+Objetivo: que toda la información viva en Room y se conserve al cerrar y abrir la app, sin
+Internet.
+
+1.1 Dependencias (libs.versions.toml y app/build.gradle.kts): room-runtime, room-ktx,
+    room-compiler con KSP (plugin ksp compatible con Kotlin 2.2.10). Configurar la carpeta de
+    esquemas de Room si se exporta el esquema.
+
+1.2 Entidades (paquete data/local/entity):
+  - PacienteEntity: id (autogenerado), rut (único), nombreCompleto, fechaNacimiento, correo,
+    telefonoPrincipal, telefonoSecundario (opcional), prevision, activo.
+  - UsuarioEntity: id, username (único), passwordHash, nombreCompleto, correo, rol, pacienteId
+    (nullable; para el rol PACIENTE, vincula la cuenta con su ficha), activo.
+  - ExamenEntity: id, pacienteId (FK a paciente), tipoExamen, fecha, hora, sucursal,
+    profesionalId (FK nullable a usuario), ojoEvaluado, estado, observaciones, creadoPorId,
+    createdAt, updatedAt.
+  - DocumentoExamenEntity: id, examenId (FK con borrado en cascada), nombreOriginal,
+    rutaInterna, mimeType, tamanoBytes, createdAt.
+  Usar TypeConverters para enums (Rol, EstadoExamen) y fechas (guardar como ISO o epoch).
+
+1.3 DAOs (data/local/dao) con Flow para consultas observables:
+  - PacienteDao: insertar, actualizar, obtener por id, listar todos, buscar por texto (nombre
+    o RUT), existePorRut.
+  - UsuarioDao: obtener por username, listar.
+  - ExamenDao: insertar, actualizar, eliminar (si se decide), obtener por id, listar todos,
+    listar por paciente, listar por estado; consultas con relación a paciente y documentos
+    (@Transaction + @Relation o un data class con @Embedded).
+  - DocumentoDao: insertar, listar por examen, eliminar.
+
+1.4 AppDatabase (RoomDatabase) con las 4 entidades y singleton. Crear una clase Application
+    (OftaApplication, registrada en el manifiesto) que cree la base y un contenedor simple
+    de dependencias (objeto manual, sin librerías) con los repositorios.
+
+1.5 Datos de prueba FICTICIOS al primer arranque (si la base está vacía):
+  - 8 a 10 pacientes con RUT con formato válido pero inventado, nombres ficticios, correos con
+    dominio inventado, teléfonos inventados, distintas previsiones (Fonasa, Isapre, Particular).
+  - Usuarios: 2 oftalmólogos, 1 TENS, 1 administrador, 1 o 2 pacientes (vinculados a una
+    ficha). Contraseña de demostración "1234" guardada con hash (SHA-256 con sal) y documentada
+    en el README como credencial de demo. Quitar cuentas/correos con apariencia real.
+  - 15 a 20 exámenes repartidos entre pacientes (varios exámenes por paciente para que el
+    historial tenga sentido), con tipos del caso: Agudeza visual, Campimetría computarizada,
+    Topografía corneal, Tonometría de aplanación, OCT, Fondo de ojo. Distintas fechas,
+    sucursales (Puerto Montt, Santiago, Valdivia) y estados.
+  - Opcional recomendado: generar 2 o 3 documentos simulados (PDF simple con PdfReport) para
+    algunos exámenes de ejemplo, guardados en almacenamiento interno.
+
+1.6 Repositorios (repository/): ExamenRepository, PacienteRepository, UsuarioRepository sobre los
+    DAO. Exponen Flow y funciones suspend. Mapean entidades a las clases de model/ (para que
+    la UI no dependa de Room). Eliminar por completo runBlocking y JDBC.
+
+Criterio de terminado: la app compila sin JDBC; todo el contenido sale de Room; registrar un
+dato lo deja guardado tras cerrar y reabrir la app.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 2. ViewModels, estado y validaciones
+-------------------------------------------------------------------------------------
+2.1 Cada pantalla con lógica tiene su ViewModel con un UiState (data class) expuesto como
+    StateFlow, con campos de carga (isLoading) y error (mensaje). Usar viewModelScope y
+    funciones suspend; nunca bloquear el hilo principal. Capturar excepciones y convertirlas
+    en mensajes para el usuario.
+2.2 ViewModels con una fábrica (ViewModelProvider.Factory) que reciba los repositorios del
+    contenedor de dependencias. Un solo repositorio compartido, no uno por ViewModel.
+2.3 Crear los ViewModels: SesionViewModel (login, usuario actual), InicioViewModel (resumen),
+    ExamenesViewModel (lista, búsqueda, filtros), ExamenDetalleViewModel, RegistrarExamenViewModel,
+    PacientesViewModel, PacienteFichaViewModel (ficha + historial), RegistrarPacienteViewModel.
+2.4 Validaciones fuera de la UI: crear un objeto Validadores (util/Validadores.kt) con
+    funciones puras (RUT con dígito verificador módulo 11, correo, teléfono chileno, fecha de
+    nacimiento no futura y edad máxima 130, texto mínimo/máximo). Los ViewModels las usan y
+    exponen errores por campo en el UiState.
+2.5 EstadoExamen como enum: PENDIENTE, VALIDADO, OBSERVADO, ENTREGADO (reemplaza los textos
+    "Pendiente"/"Completado" sueltos). Reglas:
+      - TENS crea exámenes en PENDIENTE.
+      - OFTALMOLOGO pasa a VALIDADO u OBSERVADO. Para OBSERVADO la observación es obligatoria.
+      - ADMINISTRADOR pasa de VALIDADO a ENTREGADO.
+      - TENS puede corregir un examen OBSERVADO y volverlo a PENDIENTE.
+      - No se puede pasar a VALIDADO ni ENTREGADO sin al menos un documento adjunto.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 3. Formularios (login, paciente y examen)
+-------------------------------------------------------------------------------------
+Usar componentes Material 3 estándar (OutlinedTextField con isError y supportingText, botones
+Button/OutlinedButton). Mostrar el error JUNTO a cada campo, no solo en un diálogo. Mientras se
+guarda, deshabilitar el botón y mostrar indicador de progreso. Confirmar con Snackbar SOLO después
+de que Room confirmó el guardado.
+
+3.1 Login: OutlinedTextField con icono, botón mostrar/ocultar contraseña, mensajes de error por
+    campo y de credenciales inválidas, tecla Enter para ingresar. Autenticar contra Room
+    (hash). Eliminar "¿Olvidaste tu contraseña?". Agregar texto breve: "MVP académico con datos
+    ficticios. No reemplaza el criterio médico."
+
+3.2 Nuevo paciente (pantalla nueva, accesible para TENS, OFTALMOLOGO y ADMINISTRADOR):
+    Campos: RUT (obligatorio, válido, único; formatear mientras se escribe), nombre completo
+    (obligatorio), fecha de nacimiento (DatePicker, obligatoria), correo (obligatorio, formato),
+    teléfono principal (obligatorio), teléfono secundario (opcional), previsión (lista).
+    Mostrar un recordatorio: "Usa solo datos ficticios".
+
+3.3 Registrar examen (rehacer RegistrarExamenScreen.kt):
+    Campos y reglas:
+      - Paciente: selector con búsqueda sobre pacientes de Room (por nombre o RUT). Si no hay
+        pacientes, mostrar mensaje y botón "Crear paciente". Eliminar la opción "Sin pacientes".
+      - Fecha: DatePicker de Material 3 (obligatoria). Si el estado no es PENDIENTE, no puede
+        ser futura.
+      - Hora: TimePicker de Material 3 (obligatoria).
+      - Sucursal y tipo de examen: listas desplegables (ExposedDropdownMenuBox) tomadas de una
+        sola fuente (constantes o tabla de catálogo), no escritas en la pantalla.
+      - Profesional: lista de usuarios con rol OFTALMOLOGO desde Room (preseleccionar si quien
+        registra es oftalmólogo).
+      - Ojo evaluado: Derecho / Izquierdo / Ambos (botones segmentados).
+      - Observaciones: opcional, máximo 500 caracteres con contador.
+      - Documento del resultado: botón "Adjuntar PDF o imagen" (Bloque 5). Opcional al crear,
+        obligatorio para VALIDADO/ENTREGADO.
+    El estado inicial es PENDIENTE (no se elige al crear).
+    Al guardar con éxito: Snackbar de confirmación y navegar al detalle del examen creado.
+
+3.4 Editar examen (reutilizar la misma pantalla en modo edición): permitido para TENS mientras
+    el examen esté PENDIENTE u OBSERVADO; el oftalmólogo/administrador cambian el estado según
+    las reglas del punto 2.5 y agregan observaciones. Guardar updatedAt.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 4. Listas, búsqueda, filtros y detalle
+-------------------------------------------------------------------------------------
+4.1 Lista de exámenes (ExamenesScreen.kt): campo de búsqueda con icono y botón limpiar (texto
+    sobre paciente, RUT y tipo); fila de chips de filtro por estado; filtros por sucursal,
+    tipo de examen y rango de fechas (DateRangePicker). Filtros combinables, calculados en el
+    ViewModel con combine sobre los Flow de Room. Orden por fecha descendente. Mostrar
+    contador de resultados. Estado vacío con icono y texto ("No hay exámenes con estos
+    filtros") y botón "Limpiar filtros".
+4.2 ExamenCard: tipo, paciente, fecha/hora, sucursal, chip de estado con icono + texto (no
+    depender solo del color), indicador si tiene documento adjunto.
+4.3 Detalle (DetalleExamenScreen.kt): secciones claras: datos del paciente, datos del examen,
+    estado y observaciones, documentos adjuntos (lista con nombre, tipo, botón "Ver" y botón
+    "Compartir"), acciones según rol (Editar, Cambiar estado, Generar PDF). Un examen puede
+    tener varios documentos.
+4.4 Pacientes: lista con búsqueda por nombre o RUT; tocar un paciente abre su ficha.
+4.5 Ficha del paciente (pantalla nueva) = historial: datos básicos y línea de tiempo de sus
+    exámenes (más reciente arriba), con filtro por tipo de examen para comparar la evolución
+    de un mismo examen en el tiempo. Cada examen del historial abre su detalle. Esto reemplaza
+    la pantalla Historial actual (conservar su función: historial por paciente).
+4.6 Inicio: tarjetas de resumen por estado (pendientes, observados, validados, entregados),
+    cada una lleva a la lista ya filtrada; lista de "Últimos exámenes" (3 o 4) con acceso al
+    detalle; accesos rápidos según rol.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 5. Documentos del examen (núcleo del problema del cliente)
+-------------------------------------------------------------------------------------
+Hoy los resultados llegan en PDF, imágenes o planillas. La app debe permitir centralizarlos.
+5.1 Adjuntar: usar ActivityResultContracts.OpenDocument (o GetContent) con tipos PDF e imagen
+    (opcional: tabla/Excel como archivo, solo para guardar y compartir). Copiar el archivo a
+    almacenamiento interno (filesDir/documentos/) con un nombre único y guardar en Room
+    nombre original, ruta, tipo y tamaño. Limitar tamaño razonable (por ejemplo 10 MB) con
+    mensaje de error claro. Manejar cancelación del selector sin romper el flujo.
+5.2 Ver: PDF e imágenes se abren con el visor del sistema (ACTION_VIEW con FileProvider) o,
+    para imágenes, con una vista dentro de la app. Si no hay aplicación para abrirlo, mostrar
+    mensaje.
+5.3 Compartir/exportar: botón "Compartir" (ACTION_SEND con FileProvider) para que el paciente
+    pueda llevarse el documento o el PDF resumen (segunda opinión).
+5.4 Eliminar documento (solo TENS/ADMINISTRADOR y mientras el examen no esté ENTREGADO).
+5.5 Actualizar res/xml/file_paths.xml si hace falta (documentos/ y reportes/).
+5.6 PdfReport.kt: mejorar el PDF resumen (encabezado con nombre de la app, bloque del
+    paciente, bloque del examen, observaciones con salto de línea automático para textos
+    largos, pie con "Documento generado con datos ficticios. No reemplaza el criterio
+    médico"). Ejecutar fuera del hilo principal.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 6. Recursos nativos del dispositivo (mínimo 2, ojalá 4)
+-------------------------------------------------------------------------------------
+Deben estar dentro del flujo real, no como botones de prueba:
+  1. Selector de documentos / galería (Bloque 5): adjuntar el resultado del examen.
+  2. Fecha y hora: DatePicker y TimePicker en el registro del examen y de la fecha de nacimiento.
+  3. PDF + compartir: generar el resumen, abrirlo y compartirlo con otras apps.
+  4. Estado de conexión: usar ConnectivityManager (ACCESS_NETWORK_STATE) para mostrar en
+     Inicio un indicador discreto: "Sin conexión: los datos se guardan en este dispositivo" o
+     "Conectado". Es informativo; la app funciona igual (modo local).
+  5. Notificación local con permiso: cuando un examen pasa a VALIDADO o ENTREGADO, mostrar
+     una notificación "Resultado disponible". Pedir POST_NOTIFICATIONS en tiempo de ejecución
+     en Android 13+ con un texto que explique para qué sirve; si el usuario lo deniega, la app
+     sigue funcionando sin notificar. Crear el canal una sola vez.
+Opcional: cámara (TakePicture o TakePicturePreview) para fotografiar un resultado impreso y
+adjuntarlo, con permiso CAMERA solicitado en el momento de uso.
+Eliminar el correo de prueba y el botón de prueba de notificación.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 7. Roles y permisos
+-------------------------------------------------------------------------------------
+Crear una matriz de permisos centralizada en model/Usuario.kt (funciones sobre Rol) y usarla en
+UI y ViewModels (no solo ocultar botones: validar también en el ViewModel).
+
+  PACIENTE: ve solo su ficha y SUS exámenes; ve, abre y comparte documentos; genera su PDF.
+            No registra, no edita, no ve a otros pacientes.
+  TENS (tecnólogo médico): crea pacientes; registra exámenes; adjunta documentos; edita
+            exámenes PENDIENTES u OBSERVADOS; ve todos los pacientes y exámenes.
+  OFTALMOLOGO: ve todo; agrega observaciones; pasa exámenes a VALIDADO u OBSERVADO; consulta
+            historial y compara. No modifica datos base de exámenes ya VALIDADOS/ENTREGADOS.
+  ADMINISTRADOR (cumple también el rol administrativo de entrega): ve todo; marca ENTREGADO;
+            puede ver la lista de usuarios de demostración (solo lectura).
+El menú, las tarjetas de Inicio y las acciones deben mostrarse según el rol. Un paciente
+sin ficha vinculada debe ver un mensaje claro.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 8. Navegación y diseño de interfaz (que se vea profesional y agradable)
+-------------------------------------------------------------------------------------
+8.1 Navegación: migrar a Navigation Compose (NavHost) con rutas con argumentos (por ejemplo
+    examen/{id}, paciente/{id}). Pantallas: Login, Inicio, Exámenes, Detalle, Registrar/Editar
+    examen, Pacientes, Ficha de paciente, Nuevo paciente, Perfil. El botón Atrás y el giro de
+    pantalla no deben perder la vista. Cerrar sesión limpia la pila de navegación.
+8.2 Estructura visual: reemplazar el menú lateral por una barra inferior (NavigationBar) con 4
+    destinos principales: Inicio, Exámenes, Pacientes, Perfil. Botón flotante (FAB) "Registrar
+    examen" visible solo para roles que pueden registrar. TopAppBar con título y acciones
+    contextuales. Las pantallas secundarias muestran flecha atrás.
+8.3 Componentes: usar Material 3 estándar (OutlinedTextField, ExposedDropdownMenuBox, Chips,
+    Cards, SegmentedButton, DatePicker, TimePicker, Snackbar, AlertDialog solo para
+    confirmaciones). Reemplazar los BasicTextField personalizados del login y del formulario.
+8.4 Estilo: fondo claro suave, tarjetas con esquinas redondeadas y elevación sutil, jerarquía
+    tipográfica clara (títulos, subtítulos, cuerpo), espaciados consistentes en múltiplos de
+    4 u 8 dp. Usar la fuente Roboto del proyecto desde Type.kt. Definir el esquema de colores
+    Material 3 completo en Theme.kt (primary, secondary, container, error) a partir del verde
+    #0F7A63; usar el tema en todas las pantallas (evitar colores fijos sueltos en las pantallas).
+8.5 Login atractivo: logo, nombre y subtítulo, campos limpios, botón principal grande,
+    mensaje académico al pie.
+8.6 Inicio: saludo con nombre y rol, indicador de conexión, tarjetas de resumen por estado con
+    número grande, accesos rápidos y lista de últimos exámenes.
+8.7 Estados reutilizables: crear composables EstadoVacio (icono + título + texto + acción),
+    EstadoCarga (indicador) y MensajeError (con botón reintentar), usados en todas las listas.
+8.8 Iconos: agregar material-icons-extended para iconos de salud, búsqueda, calendario,
+    adjuntos y compartir.
+8.9 Perfil: datos del usuario, rol, aviso del MVP con datos ficticios, versión, opción de
+    cerrar sesión con confirmación.
+8.10 Accesibilidad (obligatorio por pedido del cliente):
+    - contentDescription en todos los iconos informativos; null solo en decorativos.
+    - Zonas táctiles de al menos 48 dp.
+    - Tamaños de texto en sp y que respeten la escala de fuente del sistema; probar que la
+      interfaz no se rompa con texto grande.
+    - Contraste mínimo 4,5:1 en textos; el estado nunca se comunica solo con color (siempre
+      texto o icono).
+    - Recomendado: opción "Texto grande" en Perfil (escala adicional de tipografía) guardada
+      con SharedPreferences o DataStore.
+    - Etiquetas claras en formularios y errores legibles y específicos.
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 9. Pruebas automáticas mínimas (solo escribir; ejecutar queda a cargo del usuario)
+-------------------------------------------------------------------------------------
+Reemplazar ExampleUnitTest y ExampleInstrumentedTest por pruebas útiles:
+  - Unitarias de Validadores (RUT válido/ inválido, correo, teléfono, fecha).
+  - Unitarias de reglas de estado de examen y de permisos por rol.
+  - Si es simple: pruebas de DAO con Room en memoria (androidTest).
+
+
+-------------------------------------------------------------------------------------
+BLOQUE 10. Documentación y repositorio
+-------------------------------------------------------------------------------------
+10.1 Reescribir README.md (coincidir con el código real). Incluir: descripción y problema que
+     resuelve (centralizar resultados de exámenes oftalmológicos); integrantes: Diego Andrés
+     Díaz Hernández y Martín Andrés Díaz González; asignatura DSY1105; funcionalidades por
+     rol; tecnologías (Kotlin, Compose, Material 3, MVVM, StateFlow, Room, Navigation);
+     estructura de carpetas; usuarios de demostración (usuario y contraseña de demo);
+     instrucciones paso a paso para abrir y ejecutar en Android Studio (versión mínima,
+     sincronizar Gradle, emulador o dispositivo); aviso de que todos los datos son ficticios
+     y el MVP no es un sistema clínico; capturas de pantalla actualizadas en docs/.
+     Corregir inconsistencia de color (usar #0F7A63 como principal) y quitar la mención de
+     que Room "no se requiere" y de datos "en memoria".
+10.2 Verificar que el proyecto abre en Android Studio desde cero (gradlew wrapper incluido,
+     sin dependencias de archivos locales eliminados).
+10.3 Commits pequeños y descriptivos por cada bloque y subtarea importante.
+
+
+=====================================================================================
+PARTE D. MEJORAS OPCIONALES (solo si todo lo anterior está terminado y compila)
+=====================================================================================
+  - Importar un archivo Excel/CSV de ejemplo y guardarlo como documento del examen.
+  - Gráfico simple de evolución (por ejemplo agudeza visual en el tiempo) en la ficha del
+    paciente, con datos ficticios, usando solo Compose (sin librerías nuevas). Acotarlo.
+  - Tema oscuro.
+  - Persistir la sesión (recordar usuario) con DataStore.
+  - Comentarios de revisión por examen (tabla ComentarioExamen) con autor y fecha.
+  - Lectura de QR simulada (cámara) para abrir un examen por su código.
+
+
+=====================================================================================
+CHECKLIST FINAL (marcar al terminar)
+=====================================================================================
+  [ ] No queda JDBC, jar de PostgreSQL, claves ni referencias a Neon.
+  [ ] Room guarda y recupera pacientes, usuarios, exámenes y documentos.
+  [ ] Ningún runBlocking; hay estados de carga y error; la app no se cierra por errores.
+  [ ] Formularios con validación por campo y confirmación tras guardar.
+  [ ] Búsqueda y filtros combinables; lista vacía y sin resultados manejadas.
+  [ ] Detalle con documentos adjuntos que se pueden ver y compartir.
+  [ ] Dos o más recursos nativos integrados al flujo, con permisos pedidos en uso.
+  [ ] Cada rol ve y hace solo lo que le corresponde (el paciente solo lo suyo).
+  [ ] Navegación con NavHost sin perder pantalla al girar; interfaz Material 3 consistente.
+  [ ] Accesibilidad básica aplicada.
+  [ ] README real, docs/ ordenado, commits claros. Trello creado por el equipo.
+=====================================================================================
