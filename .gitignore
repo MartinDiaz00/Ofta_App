@@ -7,4 +7,12 @@ local.properties
 captures/
 *.apk
 *.aab
+*.hprof
+*.rar
+*.zip
+.kotlin/
 .DS_Store
+.env
+*.jks
+*.keystore
+secrets.properties
