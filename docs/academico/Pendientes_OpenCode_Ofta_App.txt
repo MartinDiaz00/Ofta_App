@@ -3,6 +3,88 @@ OFTA_APP - TRABAJO PENDIENTE PARA OPENCODE
 Proyecto Android (Kotlin + Jetpack Compose + Material 3 + MVVM) - DSY1105, Evaluación Parcial 2
 =====================================================================================
 
+ESTADO DE AVANCE - CONTINUAR AQUI (actualizado 26/10/2026)
+-------------------------------------------------------------------------------------
+INSTRUCCION:
+  "Empieza donde lo dejamos en docs/academico/Pendientes_OpenCode_Ofta_App.txt".
+  Leer esta seccion, revisar `git status` y continuar desde PROXIMO PASO EXACTO.
+
+DONDE QUEDAMOS:
+  - Se completaron el Bloque 0 (dependencias/configuracion base) y los Bloques 1 a 8: Room,
+    repositorios, ViewModels con StateFlow, validaciones, login contra Room, navegacion con
+    NavHost, listas/filtros, detalle, documentos, roles, recursos nativos y perfil.
+  - Ademas se resolvieron los pendientes 3 a 8 de la sesion anterior:
+    3) Login con OutlinedTextField, mostrar/ocultar contrasena y errores por campo.
+    4) Profesional desde usuarios Room, observaciones con maximo 500 y contador, RUT formateado.
+    5) Ficha de paciente con filtro por tipo de examen.
+    6) TENS puede editar OBSERVADO y devolverlo a PENDIENTE; OFTALMOLOGO puede crear pacientes.
+    7) Eliminacion de documentos solo TENS/ADMIN y bloqueada si el examen esta ENTREGADO, sin
+       revertir el estado.
+    8) Notificacion automatica al pasar a VALIDADO o ENTREGADO; se elimino el boton manual de
+       recordatorio.
+  - `UsuarioRepository` se reincorporo como repositorio de solo lectura para cargar los
+    profesionales Oftalmologo desde Room.
+  - Ya no queda JDBC/PostgreSQL/Neon/runBlocking en app/src ni en scripts Gradle.
+  - Room quedo en version 2, con esquema exportado en
+    app/schemas/com.equipo7.oftaapp.data.local.AppDatabase/2.json.
+  - Datos demo: 10 pacientes, 6 usuarios y 18 examenes; se generan PDFs ficticios para los
+    examenes con estado distinto de PENDIENTE. Los tipos de examen y profesionales se
+    alinearon con el catalogo solicitado y con los usuarios de demostracion.
+  - Pantallas existentes: Login, Inicio, Examenes, FormularioExamen (nuevo/editar), Detalle,
+    Pacientes, Ficha de paciente y Perfil.
+  - Navegacion: rutas por ID, barra inferior solo en pantallas principales, flecha atras en
+    secundarias, FAB contextual y Snackbar global.
+  - Recursos nativos integrados: DatePicker/TimePicker, selector de documentos, PDF con
+    FileProvider para abrir/compartir, estado de conexion y notificacion local con permiso.
+
+VERIFICACION REALIZADA:
+  - `.\gradlew.bat assembleDebug --no-daemon` => BUILD SUCCESSFUL.
+  - `.\gradlew.bat testDebugUnitTest --no-daemon` => BUILD SUCCESSFUL, 23 pruebas, 0 fallos:
+    ExampleUnitTest (1), FiltrosExamenTest (4), ReglasExamenTest (7), ReglasRolTest (4) y
+    ValidadoresTest (7).
+  - `.\gradlew.bat lintDebug --no-daemon` => BUILD SUCCESSFUL.
+  - APK: OftaAppKotlin/app/build/outputs/apk/debug/app-debug.apk
+  - NO se pudo probar en emulador/dispositivo en esta sesion. Siguen sin verificacion manual:
+    login, navegacion, guardado en Room, FileProvider, PDFs, compartir y notificaciones.
+  - Git: el avance se registra en un commit local sobre 1039a05. No se hizo push y los
+    commits anteriores se mantienen intactos. Revisar `git log` y `git status` antes de seguir.
+
+PENDIENTES INMEDIATOS / RIESGOS A REVISAR:
+  1. Probar la app en emulador o telefono (instalar el APK) y validar los flujos completos.
+     En particular, confirmar que la ruta opcional `examenes?estado={estado}` funciona al
+     navegar desde Inicio y desde la barra inferior.
+  2. Verificar manualmente: login por rol, alta/edicion de paciente, alta/edicion de examen,
+     filtros combinados, apertura/compartir/eliminar documentos, generacion de PDF,
+     notificacion Android 13+ y estado sin conexion.
+  3. RESUELTO: Login usa OutlinedTextField, muestra/oculta contrasena y valida por campo.
+  4. RESUELTO: Profesional desde usuarios Room, observaciones con maximo 500 y contador, y RUT
+     formateado mientras se escribe.
+  5. RESUELTO: Ficha de paciente con filtro por tipo de examen.
+  6. RESUELTO: TENS puede editar OBSERVADO y devolverlo a PENDIENTE; OFTALMOLOGO puede crear
+     pacientes; las reglas estan alineadas en Rol/ReglasExamen, ViewModel y UI.
+  7. RESUELTO: Eliminacion de documentos solo TENS/ADMIN y bloqueada si el examen esta
+     ENTREGADO; ya no revierte el estado.
+  8. RESUELTO: Notificacion automatica al pasar a VALIDADO o ENTREGADO; se elimino el boton
+     manual de recordatorio y se pide permiso con explicacion.
+  9. PENDIENTE OPCIONAL: pruebas de DAO con Room en androidTest.
+  10. RESUELTO: README y documentos actualizados, color #0F7A63 verificado, credenciales demo
+     documentadas y rutas de imagenes corregidas.
+  11. PENDIENTE: hacer commit(s) local(es) del avance antes de la entrega. No hacer push sin
+     pedirlo.
+  12. PENDIENTE MANUAL DEL USUARIO: rotar/eliminar Neon si alguna vez fue real, crear Trello y
+     asegurar commits de ambos integrantes.
+
+PROXIMO PASO EXACTO:
+  1. Abrir este archivo y ejecutar `git status` + `git diff --stat`.
+  2. Instalar el APK en un emulador/telefono (requiere `adb` disponible) y recorrer los flujos
+     de los roles segun la lista de pruebas de REVISION_RUBRICA_EP2_EP3.md.
+  3. Corregir cualquier error de ejecucion detectado (navegacion, Room, FileProvider, PDF,
+     notificacion).
+  4. Opcional: agregar pruebas de DAO con Room en androidTest.
+  5. Hacer commit(s) locales del avance; no hacer push sin pedirlo.
+
+=====================================================================================
+
 LEE ESTO PRIMERO
 ----------------
 Este archivo describe TODO lo que falta cambiar en el proyecto Ofta_App existente. No hay que

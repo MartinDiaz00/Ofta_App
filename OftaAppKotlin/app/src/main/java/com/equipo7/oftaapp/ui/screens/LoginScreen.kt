@@ -4,14 +4,12 @@ import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,14 +17,24 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,7 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -50,27 +58,46 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.equipo7.oftaapp.R
 import com.equipo7.oftaapp.ui.components.IconosDeBarra
-import com.equipo7.oftaapp.ui.theme.CampoLoginOscuro
+import com.equipo7.oftaapp.ui.theme.DivisorSuave
 import com.equipo7.oftaapp.ui.theme.ErrorFormulario
 import com.equipo7.oftaapp.ui.theme.FondoClaro
 import com.equipo7.oftaapp.ui.theme.TarjetaBlanca
-import com.equipo7.oftaapp.ui.theme.TextoPlaceholder
 import com.equipo7.oftaapp.ui.theme.TextoPrincipal
 import com.equipo7.oftaapp.ui.theme.TextoSecundario
 import com.equipo7.oftaapp.ui.theme.VerdeOfta
-import com.equipo7.oftaapp.ui.theme.VerdeOftaClaro
+
+private data class CuentaDemo(
+    val usuario: String,
+    val nombre: String,
+    val rol: String
+)
+
+private val cuentasDemo = listOf(
+    CuentaDemo("admin.ofta", "Administrador Ofta", "Administrador"),
+    CuentaDemo("dra.fernandez", "Dra. Valentina Fernández", "Oftalmóloga"),
+    CuentaDemo("dr.silva", "Dr. Roberto Silva", "Oftalmólogo"),
+    CuentaDemo("tens.martinez", "TENS Camila Martínez", "TENS"),
+    CuentaDemo("tens.rojas", "TENS Diego Rojas", "TENS"),
+    CuentaDemo("paciente.demo", "Camila Rojas", "Paciente")
+)
 
 @Composable
 fun LoginScreen(
     error: String?,
+    errores: Map<String, String>,
+    preparando: Boolean,
     onIniciarSesion: (usuario: String, contrasena: String) -> Unit,
     onCampoModificado: () -> Unit
 ) {
     IconosDeBarra(fondoClaro = true)
 
-    var confirmarSalida by remember { mutableStateOf(false) }
-
     val contexto = LocalContext.current
+    var confirmarSalida by remember { mutableStateOf(false) }
+    var mostrarCuentas by remember { mutableStateOf(false) }
+    var usuario by remember { mutableStateOf("") }
+    var contrasena by remember { mutableStateOf("") }
+    var verContrasena by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     BackHandler {
         if (confirmarSalida) confirmarSalida = false else confirmarSalida = true
@@ -102,32 +129,77 @@ fun LoginScreen(
                         (contexto as? Activity)?.finish()
                     }
                 ) {
-                    Text(
-                        text = "Salir",
-                        fontWeight = FontWeight.Bold,
-                        color = ErrorFormulario
-                    )
+                    Text(text = "Salir", fontWeight = FontWeight.Bold, color = ErrorFormulario)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmarSalida = false }) {
-                    Text(
-                        text = "Cancelar",
-                        fontWeight = FontWeight.Bold,
-                        color = VerdeOfta
-                    )
+                    Text(text = "Cancelar", fontWeight = FontWeight.Bold, color = VerdeOfta)
                 }
             }
         )
     }
 
-    var usuario by remember { mutableStateOf("") }
-    var contrasena by remember { mutableStateOf("") }
-    val focusManager = LocalFocusManager.current
+    if (mostrarCuentas) {
+        AlertDialog(
+            onDismissRequest = { mostrarCuentas = false },
+            containerColor = TarjetaBlanca,
+            title = {
+                Text(
+                    text = "Cuentas de demostración",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextoPrincipal
+                )
+            },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        text = "Todas usan la contraseña 1234. Toca una cuenta para completar el formulario.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextoSecundario
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    cuentasDemo.forEach { cuenta ->
+                        TextButton(
+                            onClick = {
+                                usuario = cuenta.usuario
+                                contrasena = "1234"
+                                mostrarCuentas = false
+                                onCampoModificado()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = cuenta.nombre,
+                                    color = TextoPrincipal,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "${cuenta.usuario} · ${cuenta.rol}",
+                                    color = TextoSecundario,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarCuentas = false }) {
+                    Text(text = "Cerrar", color = VerdeOfta)
+                }
+            }
+        )
+    }
 
     val intentarIniciarSesion = {
-        focusManager.clearFocus()
-        onIniciarSesion(usuario, contrasena)
+        if (!preparando) {
+            focusManager.clearFocus()
+            onIniciarSesion(usuario, contrasena)
+        }
     }
 
     Column(
@@ -145,8 +217,6 @@ fun LoginScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-
             Image(
                 painter = painterResource(id = R.drawable.logo),
                 contentDescription = "Logo de OftaApp",
@@ -171,30 +241,87 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            CampoOscuro(
-                valor = usuario,
-                onValorCambiado = {
+            OutlinedTextField(
+                value = usuario,
+                onValueChange = {
                     usuario = it
                     onCampoModificado()
                 },
-                placeholder = "Usuario",
-                tipoTeclado = KeyboardType.Text,
-                accionTeclado = ImeAction.Next
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Usuario") },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Filled.Person, contentDescription = null)
+                },
+                isError = errores["usuario"] != null,
+                supportingText = errores["usuario"]?.let { { Text(it) } },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = TarjetaBlanca,
+                    unfocusedContainerColor = TarjetaBlanca,
+                    focusedBorderColor = VerdeOfta,
+                    cursorColor = VerdeOfta
+                )
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            CampoOscuro(
-                valor = contrasena,
-                onValorCambiado = {
+            OutlinedTextField(
+                value = contrasena,
+                onValueChange = {
                     contrasena = it
                     onCampoModificado()
                 },
-                placeholder = "Contraseña",
-                tipoTeclado = KeyboardType.Password,
-                accionTeclado = ImeAction.Done,
-                transformacion = PasswordVisualTransformation(),
-                onFinalizar = intentarIniciarSesion
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Contraseña") },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
+                },
+                trailingIcon = {
+                    IconButton(onClick = { verContrasena = !verContrasena }) {
+                        Icon(
+                            imageVector = if (verContrasena) {
+                                Icons.Filled.VisibilityOff
+                            } else {
+                                Icons.Filled.Visibility
+                            },
+                            contentDescription = if (verContrasena) {
+                                "Ocultar contraseña"
+                            } else {
+                                "Mostrar contraseña"
+                            }
+                        )
+                    }
+                },
+                isError = errores["contrasena"] != null,
+                supportingText = errores["contrasena"]?.let { { Text(it) } },
+                singleLine = true,
+                visualTransformation = if (verContrasena) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { intentarIniciarSesion() }
+                ),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = TarjetaBlanca,
+                    unfocusedContainerColor = TarjetaBlanca,
+                    focusedBorderColor = VerdeOfta,
+                    cursorColor = VerdeOfta
+                )
             )
 
             if (!error.isNullOrBlank()) {
@@ -212,86 +339,59 @@ fun LoginScreen(
 
             Button(
                 onClick = intentarIniciarSesion,
+                enabled = !preparando,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = VerdeOfta,
-                    contentColor = androidx.compose.ui.graphics.Color.White
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    contentColor = Color.White
+                )
+            ) {
+                if (preparando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.size(10.dp))
+                    Text(text = "Preparando datos…", fontWeight = FontWeight.Bold)
+                } else {
+                    Text(
+                        text = "Iniciar sesión",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = { mostrarCuentas = true },
+                enabled = !preparando
             ) {
                 Text(
-                    text = "Iniciar sesión",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color.White
+                    text = "Ver cuentas demo",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = VerdeOfta
                 )
             }
+
+            HorizontalDivider(color = DivisorSuave)
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "MVP académico con datos ficticios. No reemplaza una evaluación ni el criterio de un profesional de salud.",
                 style = MaterialTheme.typography.bodySmall,
-                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                color = TextoSecundario,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(24.dp))
         }
 
         Spacer(modifier = Modifier.weight(1f))
     }
-}
-
-@Composable
-private fun CampoOscuro(
-    valor: String,
-    onValorCambiado: (String) -> Unit,
-    placeholder: String,
-    tipoTeclado: KeyboardType,
-    accionTeclado: ImeAction,
-    transformacion: VisualTransformation = VisualTransformation.None,
-    onFinalizar: () -> Unit = {}
-) {
-    val focusManager = LocalFocusManager.current
-    val estilo = MaterialTheme.typography.bodyLarge.copy(
-        color = androidx.compose.ui.graphics.Color.White
-    )
-
-    BasicTextField(
-        value = valor,
-        onValueChange = onValorCambiado,
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        visualTransformation = transformacion,
-        textStyle = estilo,
-        cursorBrush = SolidColor(VerdeOftaClaro),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = tipoTeclado,
-            imeAction = accionTeclado
-        ),
-        keyboardActions = KeyboardActions(
-            onNext = { focusManager.moveFocus(FocusDirection.Down) },
-            onDone = { onFinalizar() }
-        ),
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CampoLoginOscuro, RoundedCornerShape(10.dp))
-                    .padding(horizontal = 16.dp, vertical = 17.dp)
-            ) {
-                if (valor.isEmpty()) {
-                    Text(
-                        text = placeholder,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            color = TextoPlaceholder
-                        )
-                    )
-                }
-                innerTextField()
-            }
-        }
-    )
 }

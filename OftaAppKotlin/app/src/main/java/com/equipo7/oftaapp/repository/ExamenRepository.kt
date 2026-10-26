@@ -1,137 +1,256 @@
 package com.equipo7.oftaapp.repository
 
-import com.equipo7.oftaapp.OftaApplication
+import android.content.Context
+import androidx.room.withTransaction
 import com.equipo7.oftaapp.data.local.AppDatabase
-import com.equipo7.oftaapp.data.local.entity.ExamenEntity
+import com.equipo7.oftaapp.data.local.aDominio
 import com.equipo7.oftaapp.data.local.entity.DocumentoExamenEntity
-import com.equipo7.oftaapp.data.local.entity.PacienteEntity
-import com.equipo7.oftaapp.data.local.entity.UsuarioEntity
+import com.equipo7.oftaapp.data.local.entity.ExamenEntity
+import com.equipo7.oftaapp.model.DocumentoAdjunto
+import com.equipo7.oftaapp.model.EstadoExamen
 import com.equipo7.oftaapp.model.ExamenOftalmologico
-import com.equipo7.oftaapp.model.Paciente
+import com.equipo7.oftaapp.model.ReglasExamen
+import com.equipo7.oftaapp.model.Usuario
+import com.equipo7.oftaapp.notifications.NotificationHelper
+import com.equipo7.oftaapp.util.Fechas
 import com.equipo7.oftaapp.util.Validadores
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import java.util.UUID
 
-/** Repositorio local para el MVP académico. No requiere Internet ni credenciales externas. */
-class ExamenRepository {
-    private val database: AppDatabase
-        get() = AppDatabase.obtener(OftaApplication.instance)
+data class EntradaExamen(
+    val id: String = "",
+    val pacienteId: String,
+    val tipoExamen: String,
+    val fecha: String,
+    val hora: String,
+    val sucursal: String,
+    val profesional: String,
+    val ojoEvaluado: String,
+    val estado: EstadoExamen,
+    val observaciones: String
+)
 
-    suspend fun inicializarDatosDemo() {
-        if (database.pacienteDao().contar() > 0) return
-        val pacientes = listOf(
-            PacienteEntity("pac-001", "11.111.111-1", "Camila Rojas", "1995-03-12", "camila.rojas@example.test", "900000001", prevision = "Fonasa"),
-            PacienteEntity("pac-002", "22.222.222-2", "Matías González", "1988-07-21", "matias.gonzalez@example.test", "900000002", prevision = "Isapre"),
-            PacienteEntity("pac-003", "33.333.333-3", "Valentina Soto", "2001-11-04", "valentina.soto@example.test", "900000003", prevision = "Fonasa")
-        )
-        pacientes.forEach { database.pacienteDao().insertar(it) }
-        val ejemplos = listOf(
-            ExamenEntity("exa-001", "pac-001", "Tonometría de Aplanación", "15/10/2026", "10:30", "Puerto Montt", "Dra. Fernández", "Derecho", "Completado", "Registro de demostración."),
-            ExamenEntity("exa-002", "pac-002", "Campimetría Computarizada", "18/10/2026", "11:00", "Puerto Montt", "Dr. Roberto Silva", "Ambos", "Pendiente", "Examen pendiente de revisión."),
-            ExamenEntity("exa-003", "pac-003", "Fondo de ojo", "20/10/2026", "09:15", "Valdivia", "Dra. Fernández", "Izquierdo", "Pendiente", "Datos ficticios para probar la aplicación.")
-        )
-        ejemplos.forEach { database.examenDao().insertar(it) }
-        val hashDemo = hashContrasena("1234")
-        listOf(
-            UsuarioEntity("usr-001", "dra.fernandez", hashDemo, "Dra. Fernández", "fernandez@example.test", "OFTALMOLOGO"),
-            UsuarioEntity("usr-002", "dr.silva", hashDemo, "Dr. Roberto Silva", "silva@example.test", "OFTALMOLOGO"),
-            UsuarioEntity("usr-003", "tens.martinez", hashDemo, "TENS Martínez", "martinez@example.test", "TENS"),
-            UsuarioEntity("usr-004", "paciente.demo", hashDemo, "Paciente Demo", "paciente.demo@example.test", "PACIENTE", pacienteId = "pac-001")
-        ).forEach { database.usuarioDao().insertar(it) }
+class ExamenRepository(
+    private val database: AppDatabase,
+    private val documentoRepository: DocumentoRepository,
+    private val context: Context
+) {
+    fun observarTodos(usuario: Usuario): Flow<List<ExamenOftalmologico>> {
+        val flujo = if (usuario.rol == com.equipo7.oftaapp.model.Rol.PACIENTE) {
+            val pacienteId = usuario.pacienteId
+            if (pacienteId.isNullOrBlank()) flowOf(emptyList()) else {
+                database.examenDao().observarPorPaciente(pacienteId)
+            }
+        } else {
+            database.examenDao().observarTodos()
+        }
+        return flujo.map { filas -> filas.map { it.aDominio() } }
     }
 
-    suspend fun obtenerExamenes(): List<ExamenOftalmologico> =
-        database.examenDao().listarConPaciente().map { row ->
-            ExamenOftalmologico(
-                id = row.id,
-                pacienteNombre = row.pacienteNombre,
-                tipoExamen = row.tipoExamen,
-                fecha = row.fecha,
-                medicoSolicitante = row.medicoSolicitante,
-                estado = row.estado,
-                observaciones = row.observaciones,
-                ojoEvaluado = row.ojoEvaluado,
-                sucursal = row.sucursal,
-                documento = row.documento,
-                documentoUri = row.documentoUri
-            )
+    fun observarPorId(id: String, usuario: Usuario): Flow<ExamenOftalmologico?> =
+        database.examenDao().observarPorId(id).map { fila ->
+            val visible = if (usuario.rol == com.equipo7.oftaapp.model.Rol.PACIENTE) {
+                fila?.takeIf { it.pacienteId == usuario.pacienteId }
+            } else {
+                fila
+            }
+            visible?.aDominio()
         }
 
-    suspend fun obtenerPacientes(): List<Paciente> = database.pacienteDao().listar().map {
-        Paciente(
-            id = it.id,
-            rut = it.rut,
-            nombreCompleto = it.nombreCompleto,
-            edad = edadDesde(it.fechaNacimiento),
-            prevision = it.prevision
+    fun observarDocumentos(examenId: String): Flow<List<DocumentoAdjunto>> =
+        database.documentoDao().observarPorExamen(examenId).map { documentos ->
+            documentos.map { it.aDominio() }
+        }
+
+    suspend fun obtenerPorId(id: String): ExamenOftalmologico? =
+        database.examenDao().obtenerDetallePorId(id)?.aDominio()
+
+    suspend fun obtenerDocumentos(examenId: String): List<DocumentoAdjunto> =
+        database.documentoDao().listarPorExamen(examenId).map { it.aDominio() }
+
+    suspend fun contarDocumentos(examenId: String): Int =
+        database.documentoDao().contarPorExamen(examenId)
+
+    suspend fun guardar(
+        datos: EntradaExamen,
+        documento: DocumentoSeleccionado?,
+        usuario: Usuario
+    ): Result<String> = runCatching {
+        val paciente = database.pacienteDao().obtenerPorId(datos.pacienteId)
+            ?: error("Selecciona un paciente válido.")
+        val fechaIso = Fechas.aIso(datos.fecha) ?: error("La fecha del examen no es válida.")
+        require(!Fechas.fechaFutura(fechaIso)) { "La fecha del examen no puede ser futura." }
+        require(Validadores.horaValida(datos.hora)) { "La hora debe tener el formato HH:mm." }
+        require(Validadores.textoValido(datos.tipoExamen)) { "Selecciona el tipo de examen." }
+        require(Validadores.textoValido(datos.sucursal)) { "Selecciona la sucursal." }
+        require(Validadores.textoValido(datos.profesional)) { "Selecciona el profesional." }
+        require(Validadores.textoValido(datos.ojoEvaluado)) { "Selecciona el ojo evaluado." }
+        require(Validadores.observacionValida(datos.observaciones)) {
+            "Las observaciones no pueden superar 500 caracteres."
+        }
+
+        val id = datos.id.ifBlank { "exa-${UUID.randomUUID()}" }
+        val anterior = if (datos.id.isBlank()) null else {
+            database.examenDao().obtenerPorId(datos.id)
+                ?: error("El examen que intentas editar ya no existe.")
+        }
+        val estadoAnterior = anterior?.let { EstadoExamen.desde(it.estado) }
+        if (anterior == null) {
+            require(usuario.rol.puedeRegistrarExamen()) {
+                "Tu rol no puede registrar exámenes."
+            }
+        } else {
+            val estadoActual = estadoAnterior ?: EstadoExamen.PENDIENTE
+            require(usuario.rol.puedeEditarExamen(estadoActual)) {
+                "Tu rol no puede editar un examen en estado ${estadoActual.etiqueta}."
+            }
+            val errorTransicion = ReglasExamen.validarTransicion(
+                rol = usuario.rol,
+                estadoActual = estadoActual,
+                estadoNuevo = datos.estado
+            )
+            require(errorTransicion == null) { errorTransicion.orEmpty() }
+        }
+
+        val documentosExistentes = database.documentoDao().contarPorExamen(id)
+        val tieneDocumento = documento != null || documentosExistentes > 0
+        val errorEstado = ReglasExamen.validarEstado(
+            estado = datos.estado,
+            rol = usuario.rol,
+            observaciones = datos.observaciones,
+            tieneDocumento = tieneDocumento
         )
+        require(errorEstado == null) { errorEstado.orEmpty() }
+
+        val copia = documento?.let { seleccionado ->
+            documentoRepository.copiarDocumento(seleccionado).getOrElse { fallo ->
+                throw IllegalArgumentException(fallo.message ?: "No se pudo guardar el documento.")
+            }
+        }
+        val ahora = System.currentTimeMillis()
+        val examenEntity = ExamenEntity(
+            id = id,
+            pacienteId = paciente.id,
+            tipoExamen = datos.tipoExamen.trim(),
+            fecha = fechaIso,
+            hora = datos.hora.trim(),
+            sucursal = datos.sucursal.trim(),
+            profesional = datos.profesional.trim(),
+            ojoEvaluado = datos.ojoEvaluado.trim(),
+            estado = datos.estado.name,
+            observaciones = datos.observaciones.trim(),
+            creadoPorId = anterior?.creadoPorId ?: usuario.id,
+            createdAt = anterior?.createdAt ?: ahora,
+            updatedAt = ahora
+        )
+
+        try {
+            database.withTransaction {
+                if (anterior == null) {
+                    database.examenDao().insertar(examenEntity)
+                } else {
+                    database.examenDao().actualizar(examenEntity)
+                }
+                if (copia != null) {
+                    database.documentoDao().insertar(
+                        DocumentoExamenEntity(
+                            id = "doc-${UUID.randomUUID()}",
+                            examenId = id,
+                            nombreOriginal = copia.nombreOriginal,
+                            rutaInterna = copia.rutaInterna,
+                            mimeType = copia.mimeType,
+                            tamanoBytes = copia.tamanoBytes,
+                            createdAt = ahora
+                        )
+                    )
+                }
+            }
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            copia?.let { documentoRepository.eliminarArchivo(it.rutaInterna) }
+            throw error
+        }
+        if (estadoAnterior != datos.estado) {
+            notificarResultadoDisponible(
+                paciente = paciente.nombreCompleto,
+                tipoExamen = datos.tipoExamen,
+                estado = datos.estado
+            )
+        }
+        id
     }
 
-    suspend fun agregarExamen(examen: ExamenOftalmologico) {
-        require(examen.pacienteNombre.isNotBlank()) { "Debes seleccionar un paciente." }
-        require(examen.tipoExamen.isNotBlank()) { "Debes seleccionar el tipo de examen." }
-        require(Validadores.fechaValida(examen.fecha)) { "La fecha debe tener el formato DD/MM/AAAA y ser válida." }
-        val paciente = database.pacienteDao().obtenerPorNombre(examen.pacienteNombre)
-            ?: PacienteEntity(
-                id = "pac-${UUID.randomUUID()}",
-                rut = "DEMO-${UUID.randomUUID().toString().take(8)}",
-                nombreCompleto = examen.pacienteNombre.trim(),
-                prevision = "Sin especificar"
-            ).also { database.pacienteDao().insertar(it) }
-
-        val idExamen = examen.id.takeIf { it.isNotBlank() && it != "DB" } ?: "exa-${UUID.randomUUID()}"
-        database.examenDao().insertar(
-            ExamenEntity(
-                id = idExamen,
-                pacienteId = paciente.id,
-                tipoExamen = examen.tipoExamen.trim(),
-                fecha = examen.fecha.trim(),
-                sucursal = examen.sucursal.trim(),
-                profesional = examen.medicoSolicitante.trim(),
-                ojoEvaluado = examen.ojoEvaluado.trim(),
-                estado = examen.estado.trim(),
-                observaciones = examen.observaciones.trim(),
-                createdAt = System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis()
-            )
+    suspend fun cambiarEstado(
+        examenId: String,
+        nuevoEstado: EstadoExamen,
+        observaciones: String,
+        usuario: Usuario
+    ): Result<Unit> = runCatching {
+        val examen = database.examenDao().obtenerPorId(examenId)
+            ?: error("El examen ya no existe.")
+        val actual = EstadoExamen.desde(examen.estado)
+        val transicion = ReglasExamen.validarTransicion(
+            rol = usuario.rol,
+            estadoActual = actual,
+            estadoNuevo = nuevoEstado
         )
-        if (examen.documentoUri.isNotBlank()) {
-            database.documentoDao().insertar(
-                DocumentoExamenEntity(
-                    id = "doc-${UUID.randomUUID()}",
-                    examenId = idExamen,
-                    nombreOriginal = examen.documento,
-                    rutaInterna = examen.documentoUri,
-                    mimeType = "application/octet-stream",
-                    tamanoBytes = 0L
-                )
+        require(transicion == null) { transicion.orEmpty() }
+        val tieneDocumento = database.documentoDao().contarPorExamen(examenId) > 0
+        val errorEstado = ReglasExamen.validarEstado(
+            estado = nuevoEstado,
+            rol = usuario.rol,
+            observaciones = observaciones,
+            tieneDocumento = tieneDocumento
+        )
+        require(errorEstado == null) { errorEstado.orEmpty() }
+        val observacionFinal = observaciones.trim().ifBlank { examen.observaciones }
+        database.examenDao().actualizarEstado(
+            id = examenId,
+            estado = nuevoEstado.name,
+            observaciones = observacionFinal,
+            updatedAt = System.currentTimeMillis()
+        )
+        if (actual != nuevoEstado) {
+            val paciente = database.pacienteDao().obtenerPorId(examen.pacienteId)
+            notificarResultadoDisponible(
+                paciente = paciente?.nombreCompleto ?: "Paciente",
+                tipoExamen = examen.tipoExamen,
+                estado = nuevoEstado
             )
         }
     }
 
-    suspend fun examenesDePaciente(nombrePaciente: String): List<ExamenOftalmologico> =
-        obtenerExamenes().filter { it.pacienteNombre.equals(nombrePaciente, ignoreCase = true) }
-
-    fun siguienteId(): String = "exa-${UUID.randomUUID()}"
-
-    suspend fun buscarPorTipo(filtro: String): List<ExamenOftalmologico> {
-        val todos = obtenerExamenes()
-        if (filtro.isBlank()) return todos
-        return todos.filter {
-            it.tipoExamen.contains(filtro, ignoreCase = true) ||
-                it.pacienteNombre.contains(filtro, ignoreCase = true) ||
-                it.estado.contains(filtro, ignoreCase = true) ||
-                it.sucursal.contains(filtro, ignoreCase = true) ||
-                it.fecha.contains(filtro, ignoreCase = true)
+    suspend fun eliminarDocumento(
+        documentoId: String,
+        usuario: Usuario
+    ): Result<Unit> = runCatching {
+        require(usuario.rol.puedeEliminarDocumentos()) {
+            "Solo TENS o administrador pueden eliminar documentos."
         }
+        val documento = database.documentoDao().obtenerPorId(documentoId)
+            ?: error("El documento ya no existe.")
+        val examen = database.examenDao().obtenerPorId(documento.examenId)
+            ?: error("El examen asociado ya no existe.")
+        require(EstadoExamen.desde(examen.estado) != EstadoExamen.ENTREGADO) {
+            "No se pueden eliminar documentos de un examen entregado."
+        }
+        database.documentoDao().eliminar(documentoId)
+        documentoRepository.eliminarArchivo(documento.rutaInterna)
     }
 
-    private fun hashContrasena(valor: String): String =
-        java.security.MessageDigest.getInstance("SHA-256")
-            .digest(valor.toByteArray())
-            .joinToString("") { "%02x".format(it) }
-
-    private fun edadDesde(fecha: String): Int = try {
-        if (fecha.isBlank()) 0 else java.time.Period.between(java.time.LocalDate.parse(fecha), java.time.LocalDate.now()).years
-    } catch (_: Exception) { 0 }
+    private fun notificarResultadoDisponible(
+        paciente: String,
+        tipoExamen: String,
+        estado: EstadoExamen
+    ) {
+        if (estado != EstadoExamen.VALIDADO && estado != EstadoExamen.ENTREGADO) return
+        NotificationHelper.mostrar(
+            contexto = context,
+            titulo = "Resultado disponible",
+            mensaje = "$paciente · $tipoExamen está ${estado.etiqueta.lowercase()}."
+        )
+    }
 }
-

@@ -7,13 +7,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,7 +32,8 @@ import com.equipo7.oftaapp.ui.theme.VerdeOfta
 fun PacienteCard(
     paciente: Paciente,
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    onEditar: (() -> Unit)? = null
 ) {
     val modificador = if (onClick != null) {
         modifier
@@ -49,7 +52,7 @@ fun PacienteCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(start = 16.dp, end = 6.dp, top = 14.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -67,19 +70,31 @@ fun PacienteCard(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = paciente.prevision,
+                    text = "${paciente.prevision} · ${paciente.telefonoPrincipal}",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = VerdeOfta
                 )
             }
 
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = TextoSecundario,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+            if (onEditar != null) {
+                IconButton(onClick = onEditar) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Editar paciente",
+                        tint = TextoSecundario,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            if (onClick != null) {
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowRight,
+                    contentDescription = "Ver ficha",
+                    tint = TextoSecundario,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }

@@ -14,8 +14,13 @@ import com.equipo7.oftaapp.data.local.entity.PacienteEntity
 import com.equipo7.oftaapp.data.local.entity.UsuarioEntity
 
 @Database(
-    entities = [PacienteEntity::class, UsuarioEntity::class, ExamenEntity::class, DocumentoExamenEntity::class],
-    version = 1,
+    entities = [
+        PacienteEntity::class,
+        UsuarioEntity::class,
+        ExamenEntity::class,
+        DocumentoExamenEntity::class
+    ],
+    version = 2,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,11 +30,18 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun documentoDao(): DocumentoDao
 
     companion object {
-        @Volatile private var INSTANCE: AppDatabase? = null
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
         fun obtener(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
-            INSTANCE ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "ofta_app.db")
+            INSTANCE ?: Room.databaseBuilder(
+                context.applicationContext,
+                AppDatabase::class.java,
+                "ofta_app.db"
+            )
                 .fallbackToDestructiveMigration()
-                .build().also { INSTANCE = it }
+                .build()
+                .also { INSTANCE = it }
         }
     }
 }

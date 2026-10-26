@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,8 +63,14 @@ fun ExamenCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${examen.pacienteNombre} · ${examen.fecha}",
+                    text = "${examen.pacienteNombre} · ${examen.pacienteRut}",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = TextoSecundario
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${examen.fechaHoraVisible} · ${examen.sucursal}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = TextoSecundario
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -70,10 +78,19 @@ fun ExamenCard(
                     EtiquetaEstado(estado = examen.estado)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = examen.medicoSolicitante,
+                        text = examen.profesional,
                         style = MaterialTheme.typography.labelMedium,
                         color = TextoSecundario
                     )
+                    if (examen.tieneDocumento) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Filled.AttachFile,
+                            contentDescription = "Tiene documento adjunto",
+                            tint = VerdeOfta,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                 }
             }
 

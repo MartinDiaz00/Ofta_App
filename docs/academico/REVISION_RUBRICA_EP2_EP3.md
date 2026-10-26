@@ -10,27 +10,32 @@
 | Indicador y ponderación | Estado en el proyecto | Qué hay y qué falta comprobar |
 |---|---|---|
 | **IE 2.1.1 — Interfaz y navegación (15%)** | **Implementado; probar recorrido completo** | Hay pantallas Compose con Material 3, menú lateral, inicio, listado, historial, formulario y detalle. Probar el recorrido desde inicio a listado, abrir un examen y volver atrás, y recorrer las opciones visibles según el rol. |
-| **IE 2.1.2 — Formularios y validación visual (15%)** | **Implementado; probar casos válidos e inválidos** | El formulario exige paciente, fecha, sucursal, profesional, tipo, ojo y estado; presenta alertas por campos vacíos y fecha inválida. Se mantiene la fecha editable y se añade selector de fecha nativo. Probar un envío incompleto, una fecha imposible y un registro válido. |
+| **IE 2.1.2 — Formularios y validación visual (15%)** | **Implementado; probar casos válidos e inválidos** | El login valida usuario y contraseña por campo con `OutlinedTextField`, errores visibles y mostrar/ocultar contraseña. El formulario exige paciente, fecha, sucursal, profesional, tipo, ojo y estado; presenta alertas por campos vacíos, fecha inválida y observaciones sobre 500 caracteres con contador. Se mantiene la fecha editable y el selector de fecha nativo. Probar un envío incompleto, una fecha imposible y un registro válido. |
 | **IE 2.2.1 — Estado, ViewModel y lógica (10%)** | **Implementado; mejorable** | `ExamenViewModel`, `MenuViewModel` y `SesionViewModel` gestionan estados con `StateFlow`; la UI observa esos estados. La conexión a repositorios se instancia directamente desde los ViewModels, aceptable para el MVP de curso pero mejorable con inyección de dependencias. |
-| **IE 2.2.2 — Listas, búsqueda, filtros y detalle (10%)** | **Implementado y reforzado** | El listado busca por paciente, tipo, estado, fecha y sucursal, abre el detalle y ahora incluye filtros visibles `Todos`, `Pendientes` y `Completados`. Probar combinaciones de búsqueda y estado, incluido un resultado vacío. |
-| **IE 2.3.1 — MVVM y persistencia Room (15%)** | **Integración en código; requiere prueba en dispositivo** | Existen `AppDatabase`, entidades Room, DAO y repositorio; el registro de exámenes se guarda en SQLite local. La evidencia definitiva es crear un examen, cerrar por completo la aplicación, volver a abrirla y comprobar que sigue en el listado. No se debe afirmar que la prueba está aprobada hasta realizarla en el dispositivo. |
+| **IE 2.2.2 — Listas, búsqueda, filtros y detalle (10%)** | **Implementado y reforzado** | El listado busca por paciente, tipo, estado, fecha y sucursal, abre el detalle e incluye filtros visibles `Todos`, `Pendientes` y `Completados`. La ficha de paciente permite filtrar su historial por tipo de examen. Probar combinaciones de búsqueda y estado, el filtro por tipo y un resultado vacío. |
+| **IE 2.3.1 — MVVM y persistencia Room (15%)** | **Integración en código; requiere prueba en dispositivo** | Existen `AppDatabase`, entidades Room, DAO y repositorios; el registro de exámenes se guarda en SQLite local y el login consulta la tabla de usuarios. La evidencia definitiva es crear un examen, cerrar por completo la aplicación, volver a abrirla y comprobar que sigue en el listado. No se debe afirmar que la prueba está aprobada hasta realizarla en el dispositivo. |
 | **IE 2.3.2 — GitHub, documentación y planificación (20%)** | **Parcial / evidencia externa pendiente** | El ZIP incluye README, documentación académica y una revisión de rúbrica. El ZIP por sí solo no demuestra commits de cada integrante ni tareas en Trello. Revisar el repositorio real, agregar commits técnicos propios de cada integrante y mantener un tablero con tareas, responsables, estado y evidencia. No inventar commits ni capturas. |
-| **IE 2.4.1 — Dos recursos del dispositivo (15%)** | **Hay tres recursos previstos; probarlos** | Selector de documentos PDF/imagen con `OpenDocument`, calendario nativo Android para elegir fecha y notificaciones locales con permiso de Android 13+. Probar cada uno en el teléfono y confirmar que el resultado se refleja en la aplicación. |
+| **IE 2.4.1 — Dos recursos del dispositivo (15%)** | **Hay tres recursos previstos; probarlos** | Selector de documentos PDF/imagen con `OpenDocument`, calendario nativo Android para elegir fecha y notificaciones locales con permiso de Android 13+. La notificación se genera automáticamente al pasar un examen a Validado o Entregado. Probar cada recurso en el teléfono y confirmar que el resultado se refleja en la aplicación. |
 
 ### Pruebas mínimas de aceptación para EP2
 
 - [ ] La app abre en el teléfono conectado por depuración inalámbrica.
 - [ ] Inicio de sesión con una cuenta de demostración y acceso correcto según rol.
+- [ ] Probar login vacío, contraseña corta y mostrar/ocultar contraseña.
 - [ ] Navegar desde inicio al listado y abrir un detalle.
 - [ ] Buscar por nombre de paciente y por tipo de examen.
 - [ ] Filtrar `Pendientes` y `Completados`; luego volver a `Todos`.
+- [ ] Abrir la ficha de un paciente con exámenes de distintos tipos y filtrar por tipo.
 - [ ] Intentar guardar con campos vacíos y comprobar el mensaje.
 - [ ] Intentar guardar una fecha inválida escrita manualmente y comprobar el mensaje.
+- [ ] Superar los 500 caracteres de observaciones y comprobar el límite y el contador.
 - [ ] Registrar un examen válido y comprobar el mensaje de confirmación.
 - [ ] Cerrar la aplicación completamente, abrirla y verificar que el examen sigue guardado.
 - [ ] Adjuntar un PDF o imagen y abrirlo desde el detalle.
+- [ ] Comprobar que TENS puede devolver un examen Observado a Pendiente.
+- [ ] Comprobar que Oftalmólogo puede crear un paciente y que TENS/Administrador pueden eliminar documentos solo si el examen no está Entregado.
 - [ ] Elegir una fecha con el calendario nativo.
-- [ ] Crear un recordatorio y aceptar el permiso de notificaciones cuando Android lo solicite.
+- [ ] Validar o entregar un examen y aceptar el permiso para recibir la notificación automática.
 - [ ] Revisar GitHub, commits de los integrantes y planificación en Trello o herramienta equivalente.
 
 ## 2. EP3 — Defensa individual (32% de la asignatura)
@@ -69,9 +74,11 @@ EP3 no se aprueba solamente agregando código: cada integrante debe poder ejecut
 
 La aplicación usa cuentas locales de prueba con contraseña `1234`:
 
+- `admin.ofta` — Administrador
 - `dra.fernandez` — Oftalmólogo
 - `dr.silva` — Oftalmólogo
 - `tens.martinez` — TENS
+- `tens.rojas` — TENS
 - `paciente.demo` — Paciente
 
 Son credenciales de demostración, no deben usarse como cuentas reales.

@@ -6,14 +6,17 @@ Aplicación Android desarrollada para la asignatura **DSY1105 — Desarrollo de 
 
 ## Funcionalidades
 
-- Inicio de sesión con cuentas de demostración por rol.
+- Inicio de sesión con cuentas de demostración por rol, validación por campo y mostrar/ocultar contraseña.
 - Resumen de exámenes y pacientes de ejemplo.
 - Listado de exámenes con búsqueda por paciente, tipo, estado, fecha o sucursal.
-- Registro de exámenes con validación de campos y fecha.
-- Detalle del examen e informe PDF.
+- Registro y edición de exámenes con validación de campos, fecha y RUT formateado mientras se escribe.
+- Selección de profesional desde los usuarios con rol Oftalmólogo registrados en Room.
+- Detalle del examen, documentos adjuntos e informe PDF.
 - Selección de fecha mediante calendario nativo de Android.
 - Filtros visibles por estado: todos, pendientes y completados.
-- Creación de recordatorio mediante notificación local (Android puede solicitar permiso).
+- Ficha de paciente con filtro por tipo de examen.
+- Notificación local automática cuando un examen queda validado o entregado (Android puede solicitar permiso).
+- Roles: TENS registra y corrige exámenes observados; Oftalmólogo valida, entrega y también puede crear pacientes; Administrador gestiona usuarios.
 - Persistencia local con Room/SQLite; la aplicación no necesita conexión a Internet ni credenciales externas.
 
 ## Tecnologías
@@ -27,7 +30,7 @@ Aplicación Android desarrollada para la asignatura **DSY1105 — Desarrollo de 
 
 ## Revisión de la rúbrica
 
-Se incluye una revisión paso a paso de los indicadores EP2 y EP3 en `docs/academico/REVISION_RUBRICA_EP2_EP3.md`. Incluye las funciones presentes, las pruebas que faltan por ejecutar y la evidencia externa que debe mantenerse en GitHub/Trello.
+Se incluye una revisión paso a paso de los indicadores EP2 y EP3 en `docs/academico/REVISION_RUBRICA_EP2_EP3.md`. Incluye las funciones presentes, las pruebas unitarias ejecutadas, las pruebas manuales pendientes y la evidencia externa que debe mantenerse en GitHub/Trello.
 
 ## Abrir el proyecto
 
@@ -45,9 +48,11 @@ Todas las cuentas utilizan la contraseña de demostración `1234`:
 
 | Rol | Usuario |
 |---|---|
+| Administrador | `admin.ofta` |
 | Oftalmólogo | `dra.fernandez` |
 | Oftalmólogo | `dr.silva` |
 | TENS | `tens.martinez` |
+| TENS | `tens.rojas` |
 | Paciente | `paciente.demo` |
 
 Estas cuentas son solo para probar el MVP. No reutilices contraseñas reales.
@@ -64,10 +69,10 @@ Estas cuentas son solo para probar el MVP. No reutilices contraseñas reales.
 
 ## Pruebas
 
-Se agregaron pruebas unitarias para las validaciones de fecha, correo y RUT en `app/src/test/java/com/equipo7/oftaapp/ValidadoresTest.kt`. En Android Studio se pueden ejecutar desde la carpeta `OftaAppKotlin` con `gradlew.bat test`.
+Se agregaron pruebas unitarias para validaciones, reglas de estado y permisos por rol en `app/src/test/java/com/equipo7/oftaapp/` (`ValidadoresTest`, `ReglasExamenTest`, `ReglasRolTest`, `FiltrosExamenTest`). Desde la carpeta `OftaAppKotlin` se ejecutan con `gradlew.bat testDebugUnitTest --no-daemon`; la compilación se verifica con `gradlew.bat assembleDebug --no-daemon`.
 
 ## Limitaciones conocidas
 
 - La autenticación utiliza cuentas de demostración locales; no es un sistema de autenticación de producción.
 - Los registros de ejemplo son ficticios y están destinados a pruebas académicas.
-- Antes de una entrega, sincroniza Gradle y ejecuta las pruebas en Android Studio. El proyecto modificado no se ha podido compilar en este entorno.
+- El proyecto compila y las pruebas unitarias pasan; la validación manual en emulador o dispositivo queda pendiente de realizarse en un entorno con `adb` disponible.

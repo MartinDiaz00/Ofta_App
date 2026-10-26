@@ -11,16 +11,16 @@ Aplicación móvil para registrar y consultar exámenes oftalmológicos usando d
 - Estado y resumen del resultado.
 
 ## Identidad visual
-- Principal: `#0B7A63`
-- Secundario: `#4DB6AC`
-- Fondo: `#F4FAF8`
-- Texto: `#212121`
+- Principal: `#0F7A63`
+- Secundario: `#4CA58E`
+- Fondo: `#F4F8F6`
+- Texto: `#1A1D1C`
 - Blanco: `#FFFFFF`
 
-![Logo de Ofta App](docs/diseno/logo.png)
+![Logo de Ofta App](../diseno/logo.png)
 
 ## Flujo principal
-![Diagrama de Actividad UML](docs/diseno/flujo-usuario-uml.png)
+![Diagrama de Actividad UML](../diseno/flujo-usuario-uml.png)
 
 ```mermaid
 flowchart TD
@@ -52,7 +52,7 @@ flowchart TD
 ```
 
 ## Interfaces
-Las imágenes están en `docs/diseno/interfaces/`.
+Las imágenes están en `docs/diseno/interfaces/` (desde este archivo: `../diseno/interfaces/`).
 
 - `login.png`
 - `menu-principal.png`
@@ -71,3 +71,5 @@ Se consideran principalmente `TopAppBar`, `NavigationBar`, `Card`, `Button`, `Te
 ## Evidencias
 - Clase 1: `docs/evidencias/clase-01/Evidencia_Clase_01_MVP_Equipo07.docx`
 - Clase 2: `docs/evidencias/clase-02/Evidencia_Clase_02_Diseno_Equipo07.docx`
+
+Desde este archivo, las rutas anteriores equivalen a `../evidencias/clase-01/` y `../evidencias/clase-02/`.

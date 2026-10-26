@@ -26,7 +26,8 @@ private val EsquemaVerde = lightColorScheme(
     outline = DivisorSuave,
     outlineVariant = DivisorSuave,
     error = ErrorFormulario,
-    onError = TextoSobreVerde
+    onError = TextoSobreVerde,
+    scrim = Color(0x66000000)
 )
 
 @Composable

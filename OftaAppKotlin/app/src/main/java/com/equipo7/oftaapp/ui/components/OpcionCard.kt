@@ -1,6 +1,5 @@
 package com.equipo7.oftaapp.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -78,26 +77,4 @@ fun OpcionCard(
             }
         }
     }
-}
-
-@Composable
-fun EtiquetaEstado(estado: String, modifier: Modifier = Modifier) {
-    val color = if (estado.equals("Completado", ignoreCase = true)) {
-        com.equipo7.oftaapp.ui.theme.EstadoCompletado
-    } else {
-        com.equipo7.oftaapp.ui.theme.EstadoPendiente
-    }
-
-    Text(
-        text = estado,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = color,
-        modifier = modifier
-            .background(
-                color = color.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(6.dp)
-            )
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-    )
 }
