@@ -1,0 +1,17 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: ofta-fhir-service
+  datasource:
+    # Cadena completa de Neon (usuario/contraseña incluidos) inyectada por variable de entorno.
+    # Nunca se versiona: ver .env.local y run-neon.ps1 en la raíz del microservicio.
+    url: ${NEON_DATABASE_URL:jdbc:h2:mem:ofta;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
+    hikari:
+      maximum-pool-size: 5
+
+logging:
+  level:
+    ca.uhn.fhir: INFO
+    com.equipo7: INFO

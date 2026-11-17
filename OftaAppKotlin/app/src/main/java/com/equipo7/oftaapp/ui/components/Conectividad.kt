@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Row
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.equipo7.oftaapp.network.SincronizacionMonitor
 import com.equipo7.oftaapp.ui.theme.EstadoPendiente
 import com.equipo7.oftaapp.ui.theme.TextoPrincipal
 
@@ -32,6 +34,7 @@ import com.equipo7.oftaapp.ui.theme.TextoPrincipal
 fun AvisoSinConexion(modifier: Modifier = Modifier) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var conectado by remember { mutableStateOf(estaConectado(context)) }
+    val estadoSincronizacion by SincronizacionMonitor.estado.collectAsStateWithLifecycle()
 
     DisposableEffect(context) {
         val manager = context.getSystemService(ConnectivityManager::class.java)
@@ -55,7 +58,13 @@ fun AvisoSinConexion(modifier: Modifier = Modifier) {
         }
     }
 
-    if (!conectado) {
+    // Modo offline y estado de sincronización pendiente exigidos por la rúbrica EP4/EP5.
+    val pendiente = estadoSincronizacion == SincronizacionMonitor.Estado.PENDIENTE
+    if (!conectado || pendiente) {
+        val aviso = when {
+            !conectado -> "Sin conexión. La app funciona con los datos locales guardados."
+            else -> "Sincronización pendiente. Los cambios están guardados en el dispositivo."
+        }
         Row(
             modifier = modifier
                 .fillMaxWidth()
@@ -65,11 +74,11 @@ fun AvisoSinConexion(modifier: Modifier = Modifier) {
         ) {
             Icon(
                 imageVector = Icons.Filled.WifiOff,
-                contentDescription = null,
+                contentDescription = aviso,
                 tint = EstadoPendiente
             )
             Text(
-                text = "Sin conexión. La app funciona con los datos locales guardados.",
+                text = aviso,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
                 color = TextoPrincipal,

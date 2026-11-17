@@ -51,7 +51,11 @@ class DetalleExamenViewModel(
         }
         viewModelScope.launch {
             examenRepository.observarDocumentos(examenId)
-                .catch { }
+                .catch {
+                    _uiState.update {
+                        it.copy(error = "No se pudieron cargar los documentos adjuntos.")
+                    }
+                }
                 .collect { documentos ->
                     _uiState.update { it.copy(documentos = documentos) }
                 }

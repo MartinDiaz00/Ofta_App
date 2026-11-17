@@ -34,11 +34,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -259,16 +265,42 @@ private fun EditorPacienteDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                CampoTexto(
-                    etiqueta = "RUT",
-                    valor = editor.rut,
-                    onValorCambiado = { valor ->
-                        onActualizar {
-                            it.copy(rut = Validadores.formatearRutMientrasEscribe(valor))
+                var rutField by remember(editor.id) {
+                    mutableStateOf(TextFieldValue(editor.rut, TextRange(editor.rut.length)))
+                }
+                // Sincroniza si el valor cambia externamente (ej. al abrir/cargar editor)
+                if (rutField.text != editor.rut) {
+                    rutField = rutField.copy(text = editor.rut, selection = TextRange(editor.rut.length))
+                }
+                OutlinedTextField(
+                    value = rutField,
+                    onValueChange = { input ->
+                        val limpioAntesCursor = input.text
+                            .take(input.selection.start.coerceIn(0, input.text.length))
+                            .count { it.isDigit() || it.equals('k', true) || it == 'K' }
+                        val formateado = Validadores.formatearRutMientrasEscribe(input.text)
+                        var conteo = 0
+                        var nuevaPos = formateado.length
+                        for (i in formateado.indices) {
+                            if (formateado[i].isDigit() || formateado[i] == 'K') conteo++
+                            if (conteo >= limpioAntesCursor) {
+                                nuevaPos = i + 1
+                                break
+                            }
                         }
+                        if (limpioAntesCursor == 0) nuevaPos = 0
+                        rutField = TextFieldValue(formateado, TextRange(nuevaPos.coerceIn(0, formateado.length)))
+                        onActualizar { it.copy(rut = formateado) }
                     },
-                    placeholder = "12.345.678-9",
-                    error = editor.errores["rut"]
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("RUT") },
+                    placeholder = { Text("12.345.678-9") },
+                    isError = editor.errores["rut"] != null,
+                    supportingText = editor.errores["rut"]?.let { { Text(it) } },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Text),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !guardando
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 CampoTexto(

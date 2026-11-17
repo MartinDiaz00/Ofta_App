@@ -109,10 +109,11 @@ class PacientesViewModel(
         val correo = editor.correo.trim()
         val telefono = editor.telefonoPrincipal.trim()
         val telefonoSecundario = editor.telefonoSecundario.trim()
+        val prevision = editor.prevision.trim()
 
-        if (!Validadores.rutValido(rut)) errores["rut"] = "RUT chileno inválido."
+        if (!Validadores.rutValido(rut)) errores["rut"] = "RUT chileno inválido (formato xx.xxx.xxx-x)."
         if (!Validadores.nombreValido(editor.nombreCompleto)) {
-            errores["nombreCompleto"] = "Ingresa un nombre de 3 a 80 caracteres."
+            errores["nombreCompleto"] = "Ingresa un nombre válido (solo letras, 3 a 80 caracteres)."
         }
         if (fechaIso == null || Fechas.fechaFutura(fechaIso) || Fechas.edad(fechaIso) > 120) {
             errores["fechaNacimiento"] = "Selecciona una fecha de nacimiento válida."
@@ -121,10 +122,13 @@ class PacientesViewModel(
             errores["correo"] = "El correo no es válido."
         }
         if (!Validadores.telefonoValido(telefono)) {
-            errores["telefonoPrincipal"] = "Ingresa un celular chileno válido."
+            errores["telefonoPrincipal"] = "Ingresa un celular chileno válido (ej. 912345678 o +56912345678)."
         }
         if (telefonoSecundario.isNotBlank() && !Validadores.telefonoValido(telefonoSecundario)) {
             errores["telefonoSecundario"] = "El teléfono secundario no es válido."
+        }
+        if (!Validadores.previsionValida(prevision)) {
+            errores["prevision"] = "Selecciona una previsión."
         }
         if (errores.isNotEmpty()) {
             _uiState.update { it.copy(editor = editor.copy(errores = errores)) }
@@ -136,12 +140,12 @@ class PacientesViewModel(
             val paciente = Paciente(
                 id = editor.id,
                 rut = rut,
-                nombreCompleto = editor.nombreCompleto.trim(),
+                nombreCompleto = editor.nombreCompleto.trim().replace(Regex("\\s+"), " "),
                 fechaNacimiento = fechaIso.orEmpty(),
                 correo = correo,
-                telefonoPrincipal = telefono,
-                telefonoSecundario = telefonoSecundario.ifBlank { null },
-                prevision = editor.prevision
+                telefonoPrincipal = Validadores.telefonoNormalizado(telefono),
+                telefonoSecundario = telefonoSecundario.ifBlank { null }?.let { Validadores.telefonoNormalizado(it) },
+                prevision = prevision
             )
             pacienteRepository.guardar(paciente)
                 .onSuccess {

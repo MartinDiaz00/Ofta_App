@@ -11,11 +11,14 @@ import com.equipo7.oftaapp.model.EstadoExamen
 import com.equipo7.oftaapp.model.ExamenOftalmologico
 import com.equipo7.oftaapp.model.ReglasExamen
 import com.equipo7.oftaapp.model.Usuario
+import com.equipo7.oftaapp.network.FhirRemoteService
+import com.equipo7.oftaapp.network.SincronizacionMonitor
 import com.equipo7.oftaapp.notifications.NotificationHelper
 import com.equipo7.oftaapp.util.Fechas
 import com.equipo7.oftaapp.util.Validadores
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -36,7 +39,8 @@ data class EntradaExamen(
 class ExamenRepository(
     private val database: AppDatabase,
     private val documentoRepository: DocumentoRepository,
-    private val context: Context
+    private val context: Context,
+    private val fhirRemoteService: FhirRemoteService? = null
 ) {
     fun observarTodos(usuario: Usuario): Flow<List<ExamenOftalmologico>> {
         val flujo = if (usuario.rol == com.equipo7.oftaapp.model.Rol.PACIENTE) {
@@ -82,7 +86,7 @@ class ExamenRepository(
         val paciente = database.pacienteDao().obtenerPorId(datos.pacienteId)
             ?: error("Selecciona un paciente válido.")
         val fechaIso = Fechas.aIso(datos.fecha) ?: error("La fecha del examen no es válida.")
-        require(!Fechas.fechaFutura(fechaIso)) { "La fecha del examen no puede ser futura." }
+        require(Fechas.parseIso(fechaIso) != null) { "La fecha del examen no es válida." }
         require(Validadores.horaValida(datos.hora)) { "La hora debe tener el formato HH:mm." }
         require(Validadores.textoValido(datos.tipoExamen)) { "Selecciona el tipo de examen." }
         require(Validadores.textoValido(datos.sucursal)) { "Selecciona la sucursal." }
@@ -173,6 +177,44 @@ class ExamenRepository(
             copia?.let { documentoRepository.eliminarArchivo(it.rutaInterna) }
             throw error
         }
+        // Integración API/FHIR (best-effort): envía DiagnosticReport al microservicio HAPI FHIR vía Retrofit.
+        fhirRemoteService?.sincronizarExamen(
+            ExamenOftalmologico(
+                id = id,
+                pacienteId = paciente.id,
+                pacienteNombre = paciente.nombreCompleto,
+                pacienteRut = paciente.rut,
+                tipoExamen = datos.tipoExamen.trim(),
+                fecha = fechaIso,
+                hora = datos.hora.trim(),
+                sucursal = datos.sucursal.trim(),
+                profesional = datos.profesional.trim(),
+                ojoEvaluado = datos.ojoEvaluado.trim(),
+                estado = datos.estado,
+                observaciones = datos.observaciones.trim(),
+                creadoPorId = anterior?.creadoPorId ?: usuario.id,
+                createdAt = anterior?.createdAt ?: ahora,
+                updatedAt = ahora
+            )
+        )?.let { resultado ->
+            resultado.onSuccess { SincronizacionMonitor.exito() }
+                .onFailure { fallo ->
+                    SincronizacionMonitor.pendiente(
+                        "Examen guardado en el dispositivo. Sincronización FHIR pendiente: " +
+                            (fallo.message ?: "sin conexión").take(110)
+                    )
+                }
+        }
+        if (anterior == null) {
+            notificarExamenAgendado(
+                examenId = id,
+                paciente = paciente.nombreCompleto,
+                tipoExamen = datos.tipoExamen,
+                fechaHora = "${Fechas.aVisible(fechaIso)} ${datos.hora}",
+                sucursal = datos.sucursal,
+                profesional = datos.profesional
+            )
+        }
         if (estadoAnterior != datos.estado) {
             notificarResultadoDisponible(
                 paciente = paciente.nombreCompleto,
@@ -207,20 +249,59 @@ class ExamenRepository(
         )
         require(errorEstado == null) { errorEstado.orEmpty() }
         val observacionFinal = observaciones.trim().ifBlank { examen.observaciones }
+        val ahoraEstado = System.currentTimeMillis()
         database.examenDao().actualizarEstado(
             id = examenId,
             estado = nuevoEstado.name,
             observaciones = observacionFinal,
-            updatedAt = System.currentTimeMillis()
+            updatedAt = ahoraEstado
         )
+        val paciente = database.pacienteDao().obtenerPorId(examen.pacienteId)
+        fhirRemoteService?.sincronizarExamen(
+            ExamenOftalmologico(
+                id = examen.id,
+                pacienteId = examen.pacienteId,
+                pacienteNombre = paciente?.nombreCompleto ?: "",
+                pacienteRut = paciente?.rut ?: "",
+                tipoExamen = examen.tipoExamen,
+                fecha = examen.fecha,
+                hora = examen.hora,
+                sucursal = examen.sucursal,
+                profesional = examen.profesional,
+                ojoEvaluado = examen.ojoEvaluado,
+                estado = nuevoEstado,
+                observaciones = observacionFinal,
+                creadoPorId = examen.creadoPorId,
+                createdAt = examen.createdAt,
+                updatedAt = ahoraEstado
+            )
+        )?.let { resultado ->
+            resultado.onSuccess { SincronizacionMonitor.exito() }
+                .onFailure { fallo ->
+                    SincronizacionMonitor.pendiente(
+                        "Estado actualizado localmente. Sincronización FHIR pendiente: " +
+                            (fallo.message ?: "sin conexión").take(110)
+                    )
+                }
+        }
         if (actual != nuevoEstado) {
-            val paciente = database.pacienteDao().obtenerPorId(examen.pacienteId)
             notificarResultadoDisponible(
                 paciente = paciente?.nombreCompleto ?: "Paciente",
                 tipoExamen = examen.tipoExamen,
                 estado = nuevoEstado
             )
         }
+    }
+
+    /** Reenvía todos los exámenes locales al servidor FHIR (idempotente: reutiliza por identificador). */
+    suspend fun sincronizarPendentes(): Result<Int> = runCatching {
+        val servicio = fhirRemoteService ?: error("Sincronización FHIR no configurada.")
+        var total = 0
+        database.examenDao().observarTodos().first().forEach { fila ->
+            servicio.sincronizarExamen(fila.aDominio()).getOrThrow()
+            total++
+        }
+        total
     }
 
     suspend fun eliminarDocumento(
@@ -239,6 +320,25 @@ class ExamenRepository(
         }
         database.documentoDao().eliminar(documentoId)
         documentoRepository.eliminarArchivo(documento.rutaInterna)
+    }
+
+    private fun notificarExamenAgendado(
+        examenId: String,
+        paciente: String,
+        tipoExamen: String,
+        fechaHora: String,
+        sucursal: String,
+        profesional: String
+    ) {
+        NotificationHelper.notificarExamenAgendado(
+            contexto = context,
+            examenId = examenId,
+            paciente = paciente,
+            tipoExamen = tipoExamen,
+            fechaHora = fechaHora,
+            sucursal = sucursal,
+            profesional = profesional
+        )
     }
 
     private fun notificarResultadoDisponible(

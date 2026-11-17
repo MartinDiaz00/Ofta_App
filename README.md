@@ -69,10 +69,20 @@ Estas cuentas son solo para probar el MVP. No reutilices contraseñas reales.
 
 ## Pruebas
 
-Se agregaron pruebas unitarias para validaciones, reglas de estado y permisos por rol en `app/src/test/java/com/equipo7/oftaapp/` (`ValidadoresTest`, `ReglasExamenTest`, `ReglasRolTest`, `FiltrosExamenTest`). Desde la carpeta `OftaAppKotlin` se ejecutan con `gradlew.bat testDebugUnitTest --no-daemon`; la compilación se verifica con `gradlew.bat assembleDebug --no-daemon`.
+Se agregaron pruebas unitarias para validaciones, reglas de estado y permisos por rol en `app/src/test/java/com/equipo7/oftaapp/` (`ValidadoresTest`, `ReglasExamenTest`, `ReglasRolTest`, `FiltrosExamenTest`, entre otras). Desde la carpeta `OftaAppKotlin` se ejecutan con `gradlew.bat testDebugUnitTest --no-daemon`; la compilación se verifica con `gradlew.bat assembleDebug --no-daemon`.
+
+## Estado y pendientes (continuación)
+
+**Avance reciente (verificado):** RUT/validaciones de paciente corregidas y reforzadas (formato `xx.xxx.xxx-x`, permite RUTs de prueba/aleatorios, sin salto de cursor al tipear), app compilada y reinstalada en dispositivo USB, backend **HAPI FHIR real** operativo en Docker, botón de conexión FHIR funcional (metadata + conteos) y sincronización de `Patient` verificada (201). Detalle y pasos de retomado en `CONTINUAR_EN_CASA.txt` (raíz del workspace) y en `INFORME_FINAL_TERCERA_EVALUACION.md`.
+
+**Pendiente:**
+- E2E completo contra HAPI real (incl. sync de `DiagnosticReport`/exámenes y conteos > 0).
+- Pruebas por todos los roles y permisos; cambios de estado y notificaciones.
+- Adjuntos/PDF end-to-end y casos de error/sin red.
+- Revisión UI/UX final, evidencias finales en informe y APK de entrega si corresponde.
 
 ## Limitaciones conocidas
 
 - La autenticación utiliza cuentas de demostración locales; no es un sistema de autenticación de producción.
 - Los registros de ejemplo son ficticios y están destinados a pruebas académicas.
-- El proyecto compila y las pruebas unitarias pasan; la validación manual en emulador o dispositivo queda pendiente de realizarse en un entorno con `adb` disponible.
+- HAPI FHIR en Docker usa almacenamiento en memoria (los datos del servidor se reinician con el contenedor); requiere Docker Desktop activo y `adb reverse` para pruebas USB con `127.0.0.1`.

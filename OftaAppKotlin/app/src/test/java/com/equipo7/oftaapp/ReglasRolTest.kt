@@ -34,4 +34,31 @@ class ReglasRolTest {
         assertFalse(Rol.TENS.puedeEditarExamen(EstadoExamen.VALIDADO))
         assertFalse(Rol.TENS.puedeEditarExamen(EstadoExamen.ENTREGADO))
     }
+
+    @Test fun soloOftalmologiaYAdminValidanYEntregan() {
+        assertTrue(Rol.OFTALMOLOGO.puedeValidarExamen())
+        assertTrue(Rol.ADMINISTRADOR.puedeValidarExamen())
+        assertTrue(Rol.OFTALMOLOGO.puedeEntregarExamen())
+        assertTrue(Rol.ADMINISTRADOR.puedeEntregarExamen())
+        assertFalse(Rol.TENS.puedeValidarExamen())
+        assertFalse(Rol.TENS.puedeEntregarExamen())
+        assertFalse(Rol.PACIENTE.puedeEntregarExamen())
+    }
+
+    @Test fun visibilidadYGestionDeUsuarios() {
+        assertTrue(Rol.TENS.puedeVerTodosLosPacientes())
+        assertTrue(Rol.OFTALMOLOGO.puedeVerTodosLosPacientes())
+        assertFalse(Rol.PACIENTE.puedeVerTodosLosPacientes())
+        assertTrue(Rol.ADMINISTRADOR.puedeGestionarUsuarios())
+        assertFalse(Rol.OFTALMOLOGO.puedeGestionarUsuarios())
+        assertFalse(Rol.TENS.puedeGestionarUsuarios())
+    }
+
+    @Test fun rolDesdeTextoDemo() {
+        assertTrue(Rol.desde("admin") == Rol.ADMINISTRADOR)
+        assertTrue(Rol.desde("OFTALMÓLOGO") == Rol.OFTALMOLOGO)
+        assertTrue(Rol.desde("TENS") == Rol.TENS)
+        assertTrue(Rol.desde(null) == Rol.PACIENTE)
+        assertTrue(Rol.desde("desconocido") == Rol.PACIENTE)
+    }
 }

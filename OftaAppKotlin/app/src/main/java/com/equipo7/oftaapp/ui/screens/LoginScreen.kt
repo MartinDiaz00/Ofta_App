@@ -3,7 +3,8 @@ package com.equipo7.oftaapp.ui.screens
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,8 +29,9 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,10 +59,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.equipo7.oftaapp.R
+import com.equipo7.oftaapp.ui.components.FondoOftalmologia
 import com.equipo7.oftaapp.ui.components.IconosDeBarra
-import com.equipo7.oftaapp.ui.theme.DivisorSuave
 import com.equipo7.oftaapp.ui.theme.ErrorFormulario
-import com.equipo7.oftaapp.ui.theme.FondoClaro
 import com.equipo7.oftaapp.ui.theme.TarjetaBlanca
 import com.equipo7.oftaapp.ui.theme.TextoPrincipal
 import com.equipo7.oftaapp.ui.theme.TextoSecundario
@@ -202,20 +203,21 @@ fun LoginScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoClaro)
             .windowInsetsPadding(WindowInsets.systemBars)
             .imePadding()
     ) {
-        Spacer(modifier = Modifier.weight(1f))
+        FondoOftalmologia(Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Image(
                 painter = painterResource(id = R.drawable.logo),
@@ -223,175 +225,164 @@ fun LoginScreen(
                 modifier = Modifier.size(88.dp)
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "Ofta App",
+                text = "OFTALMOLOGIA",
                 style = MaterialTheme.typography.headlineSmall,
-                color = TextoPrincipal
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF173A63),
+                textAlign = TextAlign.Center
             )
-
-            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Fichas Oftalmológicas Digitales",
+                text = "Fichas clínicas digitales · Acceso seguro",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextoSecundario
+                color = Color(0xFF24527E),
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
-            OutlinedTextField(
-                value = usuario,
-                onValueChange = {
-                    usuario = it
-                    onCampoModificado()
-                },
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Usuario") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Filled.Person, contentDescription = null)
-                },
-                isError = errores["usuario"] != null,
-                supportingText = errores["usuario"]?.let { { Text(it) } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = TarjetaBlanca,
-                    unfocusedContainerColor = TarjetaBlanca,
-                    focusedBorderColor = VerdeOfta,
-                    cursorColor = VerdeOfta
-                )
-            )
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OutlinedTextField(
+                        value = usuario,
+                        onValueChange = {
+                            usuario = it
+                            onCampoModificado()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Usuario") },
+                        leadingIcon = { Icon(imageVector = Icons.Filled.Person, contentDescription = null) },
+                        isError = errores["usuario"] != null,
+                        supportingText = errores["usuario"]?.let { { Text(it) } },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = TarjetaBlanca,
+                            unfocusedContainerColor = TarjetaBlanca,
+                            focusedBorderColor = VerdeOfta,
+                            cursorColor = VerdeOfta
+                        )
+                    )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = contrasena,
-                onValueChange = {
-                    contrasena = it
-                    onCampoModificado()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Contraseña") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
-                },
-                trailingIcon = {
-                    IconButton(onClick = { verContrasena = !verContrasena }) {
-                        Icon(
-                            imageVector = if (verContrasena) {
-                                Icons.Filled.VisibilityOff
-                            } else {
-                                Icons.Filled.Visibility
-                            },
-                            contentDescription = if (verContrasena) {
-                                "Ocultar contraseña"
-                            } else {
-                                "Mostrar contraseña"
+                    OutlinedTextField(
+                        value = contrasena,
+                        onValueChange = {
+                            contrasena = it
+                            onCampoModificado()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Contraseña") },
+                        leadingIcon = { Icon(imageVector = Icons.Filled.Lock, contentDescription = null) },
+                        trailingIcon = {
+                            IconButton(onClick = { verContrasena = !verContrasena }) {
+                                Icon(
+                                    imageVector = if (verContrasena) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = if (verContrasena) "Ocultar contraseña" else "Mostrar contraseña"
+                                )
                             }
+                        },
+                        isError = errores["contrasena"] != null,
+                        supportingText = errores["contrasena"]?.let { { Text(it) } },
+                        singleLine = true,
+                        visualTransformation = if (verContrasena) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { intentarIniciarSesion() }),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = TarjetaBlanca,
+                            unfocusedContainerColor = TarjetaBlanca,
+                            focusedBorderColor = VerdeOfta,
+                            cursorColor = VerdeOfta
+                        )
+                    )
+
+                    if (!error.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ErrorFormulario,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
-                },
-                isError = errores["contrasena"] != null,
-                supportingText = errores["contrasena"]?.let { { Text(it) } },
-                singleLine = true,
-                visualTransformation = if (verContrasena) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = { intentarIniciarSesion() }
-                ),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = TarjetaBlanca,
-                    unfocusedContainerColor = TarjetaBlanca,
-                    focusedBorderColor = VerdeOfta,
-                    cursorColor = VerdeOfta
-                )
-            )
 
-            if (!error.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ErrorFormulario,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+                    Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(22.dp))
+                    Button(
+                        onClick = intentarIniciarSesion,
+                        enabled = !preparando,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VerdeOfta,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        if (preparando) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.size(10.dp))
+                            Text(text = "Preparando datos…", fontWeight = FontWeight.Bold)
+                        } else {
+                            Text(
+                                text = "Iniciar sesión",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
 
-            Button(
-                onClick = intentarIniciarSesion,
-                enabled = !preparando,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = VerdeOfta,
-                    contentColor = Color.White
-                )
-            ) {
-                if (preparando) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.size(10.dp))
-                    Text(text = "Preparando datos…", fontWeight = FontWeight.Bold)
-                } else {
-                    Text(
-                        text = "Iniciar sesión",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    TextButton(
+                        onClick = { mostrarCuentas = true },
+                        enabled = !preparando
+                    ) {
+                        Text(
+                            text = "Ver cuentas demo",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = VerdeOfta
+                        )
+                    }
                 }
             }
 
-            TextButton(
-                onClick = { mostrarCuentas = true },
-                enabled = !preparando
-            ) {
-                Text(
-                    text = "Ver cuentas demo",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = VerdeOfta
-                )
-            }
-
-            HorizontalDivider(color = DivisorSuave)
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(
-                text = "MVP académico con datos ficticios. No reemplaza una evaluación ni el criterio de un profesional de salud.",
+                text = "Uso clínico de demostración con datos ficticios. No emite diagnósticos.",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextoSecundario,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
-
-        Spacer(modifier = Modifier.weight(1f))
     }
 }

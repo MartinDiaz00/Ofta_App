@@ -9,7 +9,7 @@ import com.equipo7.oftaapp.model.Usuario
 object FabricasViewModel {
     fun sesion(app: OftaApplication) = viewModelFactory {
         initializer {
-            SesionViewModel(app.autenticacionRepository, app.datosDemo)
+            SesionViewModel(app.autenticacionRepository, app.datosDemo, app.preferenciasRepository)
         }
     }
 

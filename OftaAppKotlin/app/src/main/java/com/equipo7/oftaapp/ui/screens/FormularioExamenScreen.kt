@@ -173,29 +173,31 @@ fun FormularioExamenScreen(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 CampoBoton(
-                    etiqueta = "Fecha del examen",
+                    etiqueta = "Fecha del examen (desde mañana)",
                     valor = uiState.fecha,
                     icono = Icons.Filled.CalendarMonth,
                     error = uiState.errores["fecha"],
                     onClick = {
-                        val inicial = Fechas.parseVisible(uiState.fecha) ?: java.time.LocalDate.now()
-                        DatePickerDialog(
+                        val manana = java.time.LocalDate.now().plusDays(1)
+                        val inicial = Fechas.parseVisible(uiState.fecha)?.takeIf { it.isAfter(java.time.LocalDate.now()) } ?: manana
+                        val picker = DatePickerDialog(
                             contexto,
                             { _, anio, mes, dia ->
                                 onFecha(
                                     String.format(
                                         java.util.Locale.ROOT,
-                                        "%02d/%02d/%04d",
-                                        dia,
-                                        mes + 1,
-                                        anio
+                                        "%02d/%02d/%04d", dia, mes + 1, anio
                                     )
                                 )
                             },
                             inicial.year,
                             inicial.monthValue - 1,
                             inicial.dayOfMonth
-                        ).show()
+                        )
+                        picker.datePicker.minDate = manana
+                            .atStartOfDay(java.time.ZoneId.systemDefault())
+                            .toInstant().toEpochMilli()
+                        picker.show()
                     },
                     modifier = Modifier.weight(1f)
                 )
@@ -515,10 +517,11 @@ private fun CampoBoton(
     icono: androidx.compose.ui.graphics.vector.ImageVector,
     error: String?,
     onClick: () -> Unit,
+    habilitado: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(enabled = habilitado, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = TarjetaBlanca),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)

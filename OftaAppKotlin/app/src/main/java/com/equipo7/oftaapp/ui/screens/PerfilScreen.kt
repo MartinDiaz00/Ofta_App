@@ -17,15 +17,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,20 +36,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.equipo7.oftaapp.BuildConfig
 import com.equipo7.oftaapp.model.Rol
 import com.equipo7.oftaapp.model.Usuario
+import com.equipo7.oftaapp.network.FhirRemoteService
 import com.equipo7.oftaapp.ui.theme.DivisorSuave
 import com.equipo7.oftaapp.ui.theme.ErrorFormulario
 import com.equipo7.oftaapp.ui.theme.TarjetaBlanca
 import com.equipo7.oftaapp.ui.theme.TextoSecundario
 import com.equipo7.oftaapp.ui.theme.VerdeContenedor
 import com.equipo7.oftaapp.ui.theme.VerdeOfta
+import kotlinx.coroutines.launch
 
 @Composable
 fun PerfilScreen(
@@ -54,9 +61,15 @@ fun PerfilScreen(
     textoGrande: Boolean,
     onCambiarTextoGrande: (Boolean) -> Unit,
     onCerrarSesion: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fhirRemoteService: FhirRemoteService? = null,
+    onReintentarSincronizacion: (() -> Unit)? = null
 ) {
     var confirmarSalida by remember { mutableStateOf(false) }
+    var probandoFhir by remember { mutableStateOf(false) }
+    var resultadoFhir by remember { mutableStateOf<String?>(null) }
+    var detalleFhir by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     if (confirmarSalida) {
         AlertDialog(
@@ -230,13 +243,13 @@ fun PerfilScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Datos y privacidad",
+                        text = "Datos, API y privacidad",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "La información se guarda en Room dentro del dispositivo. Los documentos adjuntos se copian al almacenamiento interno y solo se comparten cuando tú lo solicitas.",
+                        text = "La información operativa se guarda en Room dentro del dispositivo. Los documentos adjuntos se copian al almacenamiento interno y solo se comparten cuando tú lo solicitas.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextoSecundario
                     )
@@ -244,10 +257,101 @@ fun PerfilScreen(
                     HorizontalDivider(color = DivisorSuave)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Las notificaciones son locales e inmediatas. La app no envía datos a un servidor.",
+                        text = "La app integra Retrofit para comunicación HTTP y sincroniza recursos FHIR R4 (Patient, DiagnosticReport) con el microservicio HAPI FHIR cuando hay conectividad. Las notificaciones son locales. Datos de demostración académica.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextoSecundario
                     )
+                    if (fhirRemoteService != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = {
+                                probandoFhir = true
+                                resultadoFhir = null
+                                detalleFhir = null
+                                scope.launch {
+                                    val r = fhirRemoteService.verificarConexion()
+                                    r.fold(
+                                        onSuccess = {
+                                            resultadoFhir = it.mensaje
+                                            detalleFhir = it.detalle
+                                        },
+                                        onFailure = {
+                                            resultadoFhir = "Error: ${it.message}"
+                                            detalleFhir = null
+                                        }
+                                    )
+                                    probandoFhir = false
+                                }
+                            },
+                            enabled = !probandoFhir,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            if (probandoFhir) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Filled.CloudSync, contentDescription = null)
+                            }
+                            Text(
+                                text = if (probandoFhir) "Probando..." else "Probar conexión API/HAPI FHIR",
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                        Text(
+                            text = "Qué hace: verifica el endpoint FHIR y consulta su CapabilityStatement " +
+                                "(/metadata) para confirmar que el servidor responde. Al tocarlo se envía " +
+                                "una petición HTTP y aquí se muestra el resultado (FHIR OK, versión R4 y " +
+                                "cantidad de Patients/DiagnosticReports) o el error de red si el servicio " +
+                                "está caído. No modifica ni envía datos clínicos.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextoSecundario,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                        Text(
+                            text = "Endpoint: ${BuildConfig.FHIR_BASE_URL}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextoSecundario,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                        resultadoFhir?.let {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (it.startsWith("Error")) ErrorFormulario else VerdeOfta,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        detalleFhir?.let {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextoSecundario
+                            )
+                        }
+                        if (onReintentarSincronizacion != null) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedButton(
+                                onClick = onReintentarSincronizacion,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Filled.CloudSync, contentDescription = null)
+                                Text(
+                                    text = "Reintentar sincronización",
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                            Text(
+                                text = "Reenvía pacientes y exámenes guardados en el dispositivo al servidor FHIR. " +
+                                    "Es seguro: si el dato ya existe se actualiza en vez de duplicarse.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextoSecundario,
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -32,7 +32,7 @@ data class FormularioExamenUiState(
     val modoEdicion: Boolean = false,
     val pacientes: List<Paciente> = emptyList(),
     val pacienteId: String = "",
-    val fecha: String = Fechas.aVisible(Fechas.hoyIso()),
+    val fecha: String = Fechas.aVisible(java.time.LocalDate.now().plusDays(1).toString()),
     val hora: String = Fechas.ahoraHora(),
     val sucursal: String = Catalogos.sucursales.first(),
     val profesionales: List<String> = emptyList(),
@@ -247,6 +247,10 @@ class FormularioExamenViewModel(
         if (fechaIso == null || Fechas.fechaFutura(fechaIso)) {
             errores["fecha"] = "Selecciona una fecha válida que no sea futura."
         }
+        // Los exámenes nuevos se agendan obligatoriamente en el día actual.
+        if (!estado.modoEdicion && fechaIso != null && fechaIso <= Fechas.hoyIso()) {
+            errores["fecha"] = "La fecha del examen debe ser posterior a hoy (desde mañana)."
+        }
         if (!Validadores.horaValida(estado.hora)) errores["hora"] = "Selecciona una hora válida."
         if (!Validadores.textoValido(estado.tipoExamen)) {
             errores["tipoExamen"] = "Selecciona el tipo de examen."
@@ -278,6 +282,14 @@ class FormularioExamenViewModel(
             tieneDocumento = tieneDocumento
         )
         if (errorEstado != null) errores["estado"] = errorEstado
+        if (estado.modoEdicion) {
+            val errorTransicion = ReglasExamen.validarTransicion(
+                rol = usuario.rol,
+                estadoActual = estado.estadoOriginal ?: estado.estado,
+                estadoNuevo = estado.estado
+            )
+            if (errorTransicion != null) errores["estado"] = errorTransicion
+        }
 
         if (errores.isNotEmpty()) {
             _uiState.update { it.copy(errores = errores) }
@@ -290,7 +302,8 @@ class FormularioExamenViewModel(
                 id = examenId,
                 pacienteId = estado.pacienteId,
                 tipoExamen = estado.tipoExamen,
-                fecha = fechaIso.orEmpty(),
+                // El repositorio normaliza desde formato visible (dd/MM/uuuu); no convertir dos veces.
+                fecha = estado.fecha,
                 hora = estado.hora,
                 sucursal = estado.sucursal,
                 profesional = estado.profesional,

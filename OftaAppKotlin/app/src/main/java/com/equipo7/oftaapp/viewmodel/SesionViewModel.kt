@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.equipo7.oftaapp.model.Usuario
 import com.equipo7.oftaapp.repository.AutenticacionRepository
 import com.equipo7.oftaapp.repository.DatosDemo
+import com.equipo7.oftaapp.repository.PreferenciasRepository
 import com.equipo7.oftaapp.util.Validadores
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,8 @@ data class SesionUiState(
 
 class SesionViewModel(
     private val autenticacionRepository: AutenticacionRepository,
-    private val datosDemo: DatosDemo
+    private val datosDemo: DatosDemo,
+    private val preferenciasRepository: PreferenciasRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SesionUiState())
     val uiState: StateFlow<SesionUiState> = _uiState.asStateFlow()
@@ -60,6 +62,9 @@ class SesionViewModel(
         }
         viewModelScope.launch {
             val resultado = autenticacionRepository.autenticar(usuario, contrasena)
+            if (resultado.usuario != null) {
+                preferenciasRepository.guardarSesion(resultado.usuario.id)
+            }
             _uiState.value = SesionUiState(
                 usuario = resultado.usuario,
                 preparando = false,
@@ -69,6 +74,7 @@ class SesionViewModel(
     }
 
     fun cerrarSesion() {
+        preferenciasRepository.cerrarSesion()
         _uiState.value = SesionUiState(preparando = false)
     }
 

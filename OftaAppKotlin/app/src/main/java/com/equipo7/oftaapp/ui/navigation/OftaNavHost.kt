@@ -54,6 +54,7 @@ import androidx.navigation.navArgument
 import com.equipo7.oftaapp.OftaApplication
 import com.equipo7.oftaapp.model.EstadoExamen
 import com.equipo7.oftaapp.model.Usuario
+import com.equipo7.oftaapp.network.SincronizacionMonitor
 import com.equipo7.oftaapp.ui.components.AvisoSinConexion
 import com.equipo7.oftaapp.ui.components.IconosDeBarra
 import com.equipo7.oftaapp.ui.screens.DetalleExamenScreen
@@ -166,6 +167,13 @@ fun OftaNavHost(
 
     val mostrarMensaje: (String) -> Unit = { mensaje ->
         scope.launch { snackbarHostState.showSnackbar(mensaje) }
+    }
+
+    // Avisos de sincronización FHIR (servidor caído / sin red) sin bloquear el guardado local.
+    LaunchedEffect(Unit) {
+        SincronizacionMonitor.mensajes.collect { mensaje ->
+            snackbarHostState.showSnackbar(mensaje)
+        }
     }
 
     val entry by navController.currentBackStackEntryAsState()
@@ -480,7 +488,28 @@ fun OftaNavHost(
                         usuario = usuario,
                         textoGrande = textoGrande,
                         onCambiarTextoGrande = onCambiarTextoGrande,
-                        onCerrarSesion = onCerrarSesion
+                        onCerrarSesion = onCerrarSesion,
+                        fhirRemoteService = app.fhirRemoteService,
+                        onReintentarSincronizacion = {
+                            scope.launch {
+                                runCatching {
+                                    var total = 0
+                                    app.pacienteRepository.sincronizarPendentes().onSuccess { total += it }
+                                    app.examenRepository.sincronizarPendentes().onSuccess { total += it }
+                                    total
+                                }.fold(
+                                    onSuccess = { cantidad ->
+                                        SincronizacionMonitor.exito()
+                                        mostrarMensaje("Sincronización completada: $cantidad registros.")
+                                    },
+                                    onFailure = { fallo ->
+                                        SincronizacionMonitor.pendiente(
+                                            "No se pudo sincronizar: ${fallo.message ?: "sin conexión"}"
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     )
                 }
             }

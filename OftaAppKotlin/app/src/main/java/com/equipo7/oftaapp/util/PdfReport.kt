@@ -69,10 +69,39 @@ object PdfReport {
         lineas: List<String>
     ) {
         val documento = PdfDocument()
-        val pagina = documento.startPage(
-            PdfDocument.PageInfo.Builder(ANCHO, ALTO, 1).create()
+        val anchoTexto = (ANCHO - MARGEN * 2).toInt()
+        var numeroPagina = 1
+        var pagina = documento.startPage(
+            PdfDocument.PageInfo.Builder(ANCHO, ALTO, numeroPagina).create()
         )
-        val canvas = pagina.canvas
+        var canvas = pagina.canvas
+        dibujarEncabezado(canvas, titulo, subtitulo)
+        var y = 120f
+
+        lineas.forEach { linea ->
+            val texto = linea.take(1200)
+            // Si el bloque no cabe, se abre una página nueva: no se descarta contenido.
+            if (y + alturaTexto(texto, anchoTexto) > ALTO - 110f) {
+                dibujarPie(canvas, numeroPagina)
+                documento.finishPage(pagina)
+                numeroPagina++
+                pagina = documento.startPage(
+                    PdfDocument.PageInfo.Builder(ANCHO, ALTO, numeroPagina).create()
+                )
+                canvas = pagina.canvas
+                dibujarEncabezado(canvas, titulo, subtitulo)
+                y = 120f
+            }
+            y = dibujarTexto(canvas, texto, y, anchoTexto) + 8f
+        }
+
+        dibujarPie(canvas, numeroPagina)
+        documento.finishPage(pagina)
+        FileOutputStream(archivo).use { salida -> documento.writeTo(salida) }
+        documento.close()
+    }
+
+    private fun dibujarEncabezado(canvas: android.graphics.Canvas, titulo: String, subtitulo: String) {
         val paint = Paint().apply {
             color = Color.rgb(15, 122, 99)
             textSize = 19f
@@ -84,33 +113,38 @@ object PdfReport {
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         canvas.drawText(subtitulo, MARGEN, 84f, paint)
         canvas.drawLine(MARGEN, 96f, ANCHO - MARGEN, 96f, paint)
+    }
 
-        var y = 120f
-        val anchoTexto = (ANCHO - MARGEN * 2).toInt()
-        lineas.forEach { linea ->
-            val texto = linea.take(1200)
-            if (y > ALTO - 120f) return@forEach
-            y = dibujarTexto(canvas, texto, y, anchoTexto) + 8f
-        }
-
-        val pie = "AVISO: Documento generado para un MVP académico con datos ficticios. " +
-            "No constituye diagnóstico ni reemplaza el criterio médico."
+    private fun dibujarPie(canvas: android.graphics.Canvas, numeroPagina: Int) {
+        val pie = "Página $numeroPagina · AVISO: Documento generado para un MVP académico " +
+            "con datos ficticios. No constituye diagnóstico ni reemplaza el criterio médico."
         val piePaint = Paint().apply {
             color = Color.rgb(120, 120, 120)
             textSize = 9f
         }
         val pieLayout = StaticLayout.Builder
-            .obtain(pie, 0, pie.length, TextPaint(piePaint), anchoTexto)
+            .obtain(pie, 0, pie.length, TextPaint(piePaint), (ANCHO - MARGEN * 2).toInt())
             .setIncludePad(false)
             .build()
         canvas.save()
         canvas.translate(MARGEN, ALTO - 78f)
         pieLayout.draw(canvas)
         canvas.restore()
+    }
 
-        documento.finishPage(pagina)
-        FileOutputStream(archivo).use { salida -> documento.writeTo(salida) }
-        documento.close()
+    private fun alturaTexto(texto: String, ancho: Int): Float {
+        if (texto.isEmpty()) return 0f
+        val paint = TextPaint().apply {
+            color = Color.BLACK
+            textSize = 11.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        }
+        return StaticLayout.Builder
+            .obtain(texto, 0, texto.length, paint, ancho)
+            .setIncludePad(false)
+            .setLineSpacing(2f, 1f)
+            .build()
+            .height.toFloat()
     }
 
     private fun dibujarTexto(

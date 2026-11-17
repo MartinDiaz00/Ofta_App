@@ -13,6 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Firma de la APK release: secretos y llave privada NUNCA versionados
+keystore.properties
+keystores/
+*.jks
 
 .gradle/
 **/build/
