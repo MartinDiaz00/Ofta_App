@@ -244,8 +244,8 @@ class FormularioExamenViewModel(
         val errores = linkedMapOf<String, String>()
         val fechaIso = Fechas.aIso(estado.fecha)
         if (estado.pacienteId.isBlank()) errores["paciente"] = "Selecciona un paciente."
-        if (fechaIso == null || Fechas.fechaFutura(fechaIso)) {
-            errores["fecha"] = "Selecciona una fecha válida que no sea futura."
+        if (fechaIso == null) {
+            errores["fecha"] = "Selecciona una fecha válida."
         }
         // Los exámenes nuevos se agendan obligatoriamente en el día actual.
         if (!estado.modoEdicion && fechaIso != null && fechaIso <= Fechas.hoyIso()) {
